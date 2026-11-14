@@ -10,6 +10,7 @@ import io.github.bbsk.c5d.model.reference.dto.bulk.ReferenceDataRequest
 import io.github.bbsk.c5d.model.reference.dto.bulk.ReferenceStaffDto
 import io.github.bbsk.c5d.model.reference.dto.request.CreateServiceCenterRequest
 import io.github.bbsk.c5d.model.reference.dto.request.CreateWorkTypeRequest
+import io.github.bbsk.c5d.model.reference.entity.*
 import io.github.bbsk.c5d.model.reference.enums.*
 import io.github.bbsk.c5d.repository.*
 import jakarta.persistence.EntityManager
@@ -149,11 +150,11 @@ class ReferenceServiceTest {
         assertEquals(1, result.counts["buildings"])
         assertEquals(1, result.counts["work_types"])
 
-        verify(serviceCenterRepository, times(1)).saveAll(any<Iterable<Any>>())
-        verify(accessNodeRepository, times(1)).saveAll(any<Iterable<Any>>())
-        verify(buildingRepository, times(1)).saveAll(any<Iterable<Any>>())
-        verify(workTypeRepository, times(1)).saveAll(any<Iterable<Any>>())
-        verify(shiftRepository, times(1)).saveAll(any<Iterable<Any>>())
-        verify(staffRepository, times(1)).saveAll(any<Iterable<Any>>())
+        verify(serviceCenterRepository, times(1)).saveAll(any<List<ServiceCenter>>())
+        verify(accessNodeRepository, times(1)).saveAll(any<List<AccessNode>>())
+        verify(buildingRepository, times(1)).saveAll(any<List<Building>>())
+        verify(workTypeRepository, times(1)).saveAll(any<List<WorkType>>())
+        verify(shiftRepository, times(1)).saveAll(any<List<Shift>>())
+        verify(staffRepository, times(1)).saveAll(any<List<Staff>>())
     }
 }

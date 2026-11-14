@@ -1,7 +1,9 @@
 package io.github.bbsk.c5d.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.bbsk.c5d.exception.BadRequestException
 import io.github.bbsk.c5d.model.reference.dto.bulk.TravelMatrixRequest
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -9,14 +11,26 @@ import org.junit.jupiter.api.Test
 class TravelMatrixServiceTest {
 
     private lateinit var travelMatrixService: TravelMatrixService
+    private val testFileName = "test_travel_matrix.json"
 
     @BeforeEach
     fun setUp() {
-        travelMatrixService = TravelMatrixService()
+        travelMatrixService = TravelMatrixService(
+            objectMapper = ObjectMapper(),
+            matrixFilePath = testFileName
+        )
+    }
+
+    @AfterEach
+    fun tearDown() {
+        val file = travelMatrixService.getMatrixFile()
+        if (file.exists()) {
+            file.delete()
+        }
     }
 
     @Test
-    fun `save travel matrix successfully stores data and returns count`() {
+    fun `save travel matrix successfully writes JSON file and updates metadata`() {
         val request = TravelMatrixRequest(
             matrixId = "ekb-2026-10-v1",
             points = listOf("SC-01", "B-00001", "B-00002"),
@@ -37,10 +51,12 @@ class TravelMatrixServiceTest {
         assertEquals(3, count)
         assertTrue(travelMatrixService.isLoaded())
         assertEquals("ekb-2026-10-v1", travelMatrixService.getMatrixId())
-        assertEquals(300, travelMatrixService.getDurationSec("SC-01", "B-00001"))
-        assertEquals(200, travelMatrixService.getDurationSec("B-00001", "B-00002"))
-        assertEquals(5000, travelMatrixService.getDistanceM("SC-01", "B-00002"))
-        assertNull(travelMatrixService.getDurationSec("UNKNOWN", "B-00001"))
+        assertEquals(3, travelMatrixService.getPointsCount())
+
+        // Проверяем, что файл действительно записан на диск
+        val savedFile = travelMatrixService.getMatrixFile()
+        assertTrue(savedFile.exists(), "Файл матрицы перемещений должен быть сохранен на диск")
+        assertTrue(savedFile.length() > 0, "Файл матрицы перемещений не должен быть пустым")
     }
 
     @Test

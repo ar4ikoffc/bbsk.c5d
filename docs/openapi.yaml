@@ -25,6 +25,17 @@ tags:
     description: "Справочник нормативных типов работ, контрольных сроков (SLA) и необходимых профилей"
   - name: "Справочные данные"
     description: "Пакетная инициализация справочников и единой матрицы времени в пути (benchmark)"
+  - name: "Наряды на работы (Orders)"
+    description: "Управление нарядами на выездные работы: создание, фильтрация, детальный просмотр, обновление параметров и статусов, удаление (CRUD)"
+  - name: "Рабочие дни (Days)"
+    description: "Пакетная инициализация контекста дня, заказов и отсутствующих сотрудников"
+  - name: "План смены (Plan)"
+    description: "Расчет и получение оптимального суточного плана распределения нарядов и маршрутизации"
+  - name: "События смены (Events)"
+    description: "Регистрация внешних событий (отмены, новые заявки, сходы) и реактивное перепланирование"
+  - name: "Python Solver"
+    description: "Модуль Multi-Vehicle VRPTW оптимизации маршрутов (порт 8000)"
+
 
 paths:
   /api/v1/health:
@@ -696,6 +707,419 @@ paths:
                 $ref: '#/components/schemas/LoadResultResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+
+  /api/v1/orders:
+    get:
+      tags: ["Наряды на работы (Orders)"]
+      summary: Получить список нарядов
+      description: Возвращает список нарядов на выполнение выездных работ с поддержкой фильтрации по рабочему дню, дате, статусу, зданию и типу работ.
+      parameters:
+        - name: day_id
+          in: query
+          required: false
+          description: Фильтр по UUID рабочего дня
+          schema:
+            type: string
+            format: uuid
+          example: "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
+        - name: date
+          in: query
+          required: false
+          description: Фильтр по календарной дате рабочего дня (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+          example: "2026-10-26"
+        - name: status
+          in: query
+          required: false
+          description: Фильтр по статусу наряда (PENDING, ASSIGNED, COMPLETED, CANCELLED, UNASSIGNED)
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+        - name: building_id
+          in: query
+          required: false
+          description: Фильтр по UUID здания / объекта обслуживания
+          schema:
+            type: string
+            format: uuid
+          example: "4ba85f64-5717-4562-b3fc-2c963f66afa7"
+        - name: work_type_id
+          in: query
+          required: false
+          description: Фильтр по UUID типа работ
+          schema:
+            type: string
+            format: uuid
+          example: "c3d4e5f6-a7b8-9c0d-1e2f-3a4b5c6d7e8f"
+      responses:
+        '200':
+          description: Список нарядов успешно получен
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkOrderResponse'
+    post:
+      tags: ["Наряды на работы (Orders)"]
+      summary: Создать наряд на работы
+      description: |
+        Создает новый наряд на выездные работы. Проверяет существование связанных сущностей (рабочий день, тип работ, здание, узел доступа, СЦ) и уникальность номера наряда. При отсутствии необязательных параметров (latest_start, deadline, access_node, service_center) вычисляет их автоматически по нормативам.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkOrderRequest'
+      responses:
+        '201':
+          description: Наряд успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/orders/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Уникальный идентификатор наряда (UUID)
+        schema:
+          type: string
+          format: uuid
+        example: "7ca85f64-5717-4562-b3fc-2c963f66afa9"
+    get:
+      tags: ["Наряды на работы (Orders)"]
+      summary: Получить наряд по ID
+      description: Возвращает детальную информацию о наряде по его внутреннему идентификатору (UUID).
+      responses:
+        '200':
+          description: Наряд найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: ["Наряды на работы (Orders)"]
+      summary: Обновить наряд на работы
+      description: Частично или полностью обновляет параметры наряда (статус, тип работ, адрес, временной слот, крайний срок, потребность в оборудовании и т.д.).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkOrderRequest'
+      responses:
+        '200':
+          description: Наряд успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: ["Наряды на работы (Orders)"]
+      summary: Удалить наряд
+      description: Удаляет наряд из базы данных по его внутреннему идентификатору (UUID).
+      responses:
+        '204':
+          description: Наряд успешно удален
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/days/{date}:
+    put:
+      tags: ["Рабочие дни (Days)"]
+      summary: Пакетная инициализация дня
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-10-26"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DayInputDto'
+      responses:
+        '200':
+          description: День успешно инициализирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DayResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags: ["Рабочие дни (Days)"]
+      summary: Получить информацию о рабочем дне
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-10-26"
+      responses:
+        '200':
+          description: Информация о дне
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DayResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/days/{date}/plan:
+    post:
+      tags: ["План смены (Plan)"]
+      summary: Рассчитать оптимальный план смены
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-10-26"
+      responses:
+        '200':
+          description: План успешно рассчитан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags: ["План смены (Plan)"]
+      summary: Получить текущий план смены
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-10-26"
+      responses:
+        '200':
+          description: План получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/days/{date}/events:
+    post:
+      tags: ["События смены (Events)"]
+      summary: Зарегистрировать событие смены
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-10-26"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventInputDto'
+      responses:
+        '200':
+          description: Событие обработано, план актуализирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResultResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/solver/optimize:
+    post:
+      tags: ["Python Solver"]
+      summary: Оптимизация маршрутов (Multi-Vehicle VRPTW)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolverRequest'
+      responses:
+        '200':
+          description: Маршруты успешно рассчитаны
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolverResponse'
+
+  /api/v1/days/{date}:
+    put:
+      tags: ["Рабочие дни (Days)"]
+      summary: Пакетная инициализация дня
+      description: Инициализирует или перезаписывает заказы и отсутствующих сотрудников дня.
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-10-26"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DayInputDto'
+      responses:
+        '200':
+          description: День успешно инициализирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DayResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags: ["Рабочие дни (Days)"]
+      summary: Получить информацию о рабочем дне
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-10-26"
+      responses:
+        '200':
+          description: Информация о дне
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DayResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/days/{date}/plan:
+    post:
+      tags: ["План смены (Plan)"]
+      summary: Рассчитать оптимальный план смены
+      description: Выявляет ПГП, изолирует недоступных инженеров, вызывает солвер и сохраняет маршруты.
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-10-26"
+      responses:
+        '200':
+          description: План успешно рассчитан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags: ["План смены (Plan)"]
+      summary: Получить текущий план смены
+      description: Возвращает сохраненный план смены без повторного пересчета.
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-10-26"
+      responses:
+        '200':
+          description: План получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/days/{date}/events:
+    post:
+      tags: ["События смены (Events)"]
+      summary: Зарегистрировать событие смены
+      description: Принимает событие, замораживает завершенные остановки и выполняет реактивное перепланирование.
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-10-26"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventInputDto'
+      responses:
+        '200':
+          description: Событие обработано, план актуализирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResultResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/solver/optimize:
+    post:
+      tags: ["Python Solver"]
+      summary: Оптимизация маршрутов (Multi-Vehicle VRPTW)
+      description: Эндпоинт солвера (порт 8000) для расчета маршрутов выездных бригад.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolverRequest'
+      responses:
+        '200':
+          description: Маршруты успешно рассчитаны
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolverResponse'
 
 components:
   responses:
@@ -1518,3 +1942,917 @@ components:
             access_nodes: 142
             buildings: 1260
             work_types: 8
+
+    OrderStatus:
+      type: string
+      description: Статус наряда на работы
+      enum: [PENDING, ASSIGNED, COMPLETED, CANCELLED, UNASSIGNED]
+      example: PENDING
+
+    TimeWindowDto:
+      type: object
+      description: Временное окно / согласованный интервал
+      required: [start, end]
+      properties:
+        start:
+          type: string
+          format: date-time
+          description: Начало интервала
+          example: '2026-10-26T09:00:00+05:00'
+        end:
+          type: string
+          format: date-time
+          description: Окончание интервала
+          example: '2026-10-26T11:00:00+05:00'
+
+    CreateWorkOrderRequest:
+      type: object
+      description: Запрос на создание нового наряда на выездные работы
+      required: [order_id, work_type_id, building_id, registered_at]
+      properties:
+        order_id:
+          type: string
+          pattern: '^ORD-[0-9]{8}-[0-9]{4}$'
+          description: Уникальный строковый бизнес-код наряда (формат ORD-YYYYMMDD-XXXX)
+          example: ORD-20261026-0001
+        day_id:
+          type: string
+          format: uuid
+          description: UUID рабочего дня (если не указан, день будет найден или создан по дате day_date или slot_start)
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        day_date:
+          type: string
+          format: date
+          description: Дата рабочего дня (используется для автоматического поиска или создания дня, если day_id не передан)
+          example: '2026-10-26'
+        work_type_id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор (UUID) типа работ из справочника
+          example: c3d4e5f6-a7b8-9c0d-1e2f-3a4b5c6d7e8f
+        building_id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор (UUID) обслуживаемого здания/объекта
+          example: 4ba85f64-5717-4562-b3fc-2c963f66afa7
+        access_node_id:
+          type: string
+          format: uuid
+          description: UUID узла доступа связи (если не передан, наследуется от здания)
+          example: 2ea85f64-5717-4562-b3fc-2c963f66afa5
+        service_center_id:
+          type: string
+          format: uuid
+          description: UUID сервисного центра (если не передан, наследуется от зоны обслуживания здания)
+          example: 1fa85f64-5717-4562-b3fc-2c963f66afa4
+        registered_at:
+          type: string
+          format: date-time
+          description: Дата и время регистрации наряда клиентом/оператором
+          example: '2026-10-25T14:30:00+05:00'
+        slot:
+          $ref: '#/components/schemas/TimeWindowDto'
+        slot_start:
+          type: string
+          format: date-time
+          description: Начало согласованного 2-часового временного интервала
+          example: '2026-10-26T09:00:00+05:00'
+        slot_end:
+          type: string
+          format: date-time
+          description: Окончание согласованного временного интервала
+          example: '2026-10-26T11:00:00+05:00'
+        latest_start:
+          type: string
+          format: date-time
+          description: Крайний допустимый момент начала визита (по умолчанию min(slot_end, slot_start + max_start_delay))
+          example: '2026-10-26T09:10:00+05:00'
+        deadline:
+          type: string
+          format: date-time
+          description: Контрольный срок завершения работ (по умолчанию рассчитывается по нормативу типа работ)
+          example: '2026-10-26T10:10:00+05:00'
+        required_ont:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Требуемое количество оптических терминалов (ONT)
+          example: 0
+        required_router:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Требуемое количество роутеров/модемов (ROUTER)
+          example: 1
+        required_stb:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Требуемое количество ТВ-приставок (STB)
+          example: 0
+        required_equipment:
+          $ref: '#/components/schemas/EquipmentDto'
+        is_repeat:
+          type: boolean
+          default: false
+          description: Признак повторного обращения абонента в течение 7 дней (удваивает штраф в функции потерь)
+          example: false
+        previous_order_id:
+          type: string
+          description: Код предыдущего наряда абонента (при повторном обращении)
+          example: ORD-20261020-0045
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+
+    DayInputDto:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: '2026-10-26'
+        now:
+          type: string
+          format: date-time
+          example: '2026-10-26T08:00:00+05:00'
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/DayOrderInputDto'
+        absent_staff:
+          type: array
+          items:
+            type: string
+          example: ['ST-003', 'ST-015']
+
+    DayOrderInputDto:
+      type: object
+      required: [order_id, building_id, registered_at]
+      properties:
+        order_id:
+          type: string
+          example: 'ORD-20261026-0001'
+        building_id:
+          type: string
+          example: 'B-00412'
+        work_type:
+          type: string
+          example: 'INST_PON_MKD'
+        registered_at:
+          type: string
+          format: date-time
+        slot:
+          $ref: '#/components/schemas/TimeWindowDto'
+        required_equipment:
+          $ref: '#/components/schemas/EquipmentDto'
+        is_repeat:
+          type: boolean
+          example: false
+
+    DayResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        current_now:
+          type: string
+          format: date-time
+        plan_version:
+          type: integer
+          example: 1
+        orders_count:
+          type: integer
+          example: 150
+        absent_staff_count:
+          type: integer
+          example: 2
+        absent_staff_codes:
+          type: array
+          items:
+            type: string
+          example: ['ST-003', 'ST-015']
+
+    PlanResponse:
+      type: object
+      properties:
+        day_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        plan_version:
+          type: integer
+        routes:
+          type: array
+          items:
+            type: object
+        pgp_groups:
+          type: array
+          items:
+            type: object
+        unassigned_orders:
+          type: array
+          items:
+            type: object
+        alerts:
+          type: array
+          items:
+            type: object
+        metrics:
+          type: object
+
+    EventInputDto:
+      type: object
+      required: [type, timestamp]
+      properties:
+        type:
+          type: string
+          example: 'ORDER_CANCELLED'
+        timestamp:
+          type: string
+          format: date-time
+        code:
+          type: string
+          example: 'EV-001'
+        order_id:
+          type: string
+          example: 'ORD-001'
+        staff_id:
+          type: string
+          example: 'ST-003'
+        reason:
+          type: string
+          example: 'CUSTOMER_REQUEST'
+
+    EventResultResponse:
+      type: object
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        type:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        processed_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+        plan:
+          $ref: '#/components/schemas/PlanResponse'
+
+    SolverRequest:
+      type: object
+      required: [date, now, service_centers, staff, orders]
+      properties:
+        date:
+          type: string
+          format: date
+        now:
+          type: string
+          format: date-time
+        service_centers:
+          type: array
+          items:
+            type: object
+        staff:
+          type: array
+          items:
+            type: object
+        orders:
+          type: array
+          items:
+            type: object
+
+    SolverResponse:
+      type: object
+      required: [status, execution_time_ms, routes, unassigned_orders]
+      properties:
+        status:
+          type: string
+          example: 'SUCCESS'
+        execution_time_ms:
+          type: integer
+          example: 45
+        routes:
+          type: array
+          items:
+            type: object
+        unassigned_orders:
+          type: array
+          items:
+            type: object
+
+    UpdateWorkOrderRequest:
+      type: object
+      description: Запрос на частичное или полное обновление наряда на работы
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+
+    DayInputDto:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: '2026-10-26'
+        now:
+          type: string
+          format: date-time
+          example: '2026-10-26T08:00:00+05:00'
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/DayOrderInputDto'
+        absent_staff:
+          type: array
+          items:
+            type: string
+          example: ['ST-003', 'ST-015']
+
+    DayOrderInputDto:
+      type: object
+      required: [order_id, building_id, registered_at]
+      properties:
+        order_id:
+          type: string
+          example: 'ORD-20261026-0001'
+        building_id:
+          type: string
+          example: 'B-00412'
+        work_type:
+          type: string
+          example: 'INST_PON_MKD'
+        registered_at:
+          type: string
+          format: date-time
+        slot:
+          $ref: '#/components/schemas/TimeWindowDto'
+        required_equipment:
+          $ref: '#/components/schemas/EquipmentDto'
+        is_repeat:
+          type: boolean
+          example: false
+
+    DayResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        current_now:
+          type: string
+          format: date-time
+        plan_version:
+          type: integer
+          example: 1
+        orders_count:
+          type: integer
+          example: 150
+        absent_staff_count:
+          type: integer
+          example: 2
+        absent_staff_codes:
+          type: array
+          items:
+            type: string
+          example: ['ST-003', 'ST-015']
+
+    PlanResponse:
+      type: object
+      properties:
+        day_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        plan_version:
+          type: integer
+        routes:
+          type: array
+          items:
+            type: object
+        pgp_groups:
+          type: array
+          items:
+            type: object
+        unassigned_orders:
+          type: array
+          items:
+            type: object
+        alerts:
+          type: array
+          items:
+            type: object
+        metrics:
+          type: object
+
+    EventInputDto:
+      type: object
+      required: [type, timestamp]
+      properties:
+        type:
+          type: string
+          example: 'ORDER_CANCELLED'
+        timestamp:
+          type: string
+          format: date-time
+        code:
+          type: string
+          example: 'EV-001'
+        order_id:
+          type: string
+          example: 'ORD-001'
+        staff_id:
+          type: string
+          example: 'ST-003'
+        reason:
+          type: string
+          example: 'CUSTOMER_REQUEST'
+
+    EventResultResponse:
+      type: object
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        type:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        processed_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+        plan:
+          $ref: '#/components/schemas/PlanResponse'
+
+    SolverRequest:
+      type: object
+      required: [date, now, service_centers, staff, orders]
+      properties:
+        date:
+          type: string
+          format: date
+        now:
+          type: string
+          format: date-time
+        service_centers:
+          type: array
+          items:
+            type: object
+        staff:
+          type: array
+          items:
+            type: object
+        orders:
+          type: array
+          items:
+            type: object
+
+    SolverResponse:
+      type: object
+      required: [status, execution_time_ms, routes, unassigned_orders]
+      properties:
+        status:
+          type: string
+          example: 'SUCCESS'
+        execution_time_ms:
+          type: integer
+          example: 45
+        routes:
+          type: array
+          items:
+            type: object
+        unassigned_orders:
+          type: array
+          items:
+            type: object
+        work_type_id:
+          type: string
+          format: uuid
+          description: Новый UUID типа работ
+          example: c3d4e5f6-a7b8-9c0d-1e2f-3a4b5c6d7e8f
+        building_id:
+          type: string
+          format: uuid
+          description: Новый UUID обслуживаемого здания/объекта
+          example: 4ba85f64-5717-4562-b3fc-2c963f66afa7
+        access_node_id:
+          type: string
+          format: uuid
+          description: Новый UUID узла доступа связи
+          example: 2ea85f64-5717-4562-b3fc-2c963f66afa5
+        service_center_id:
+          type: string
+          format: uuid
+          description: Новый UUID сервисного центра (или null для очистки)
+          example: 1fa85f64-5717-4562-b3fc-2c963f66afa4
+        registered_at:
+          type: string
+          format: date-time
+          description: Скорректированное время регистрации
+          example: '2026-10-25T14:30:00+05:00'
+        slot:
+          $ref: '#/components/schemas/TimeWindowDto'
+        slot_start:
+          type: string
+          format: date-time
+          description: Новое время начала согласованного слота
+          example: '2026-10-26T10:00:00+05:00'
+        slot_end:
+          type: string
+          format: date-time
+          description: Новое время окончания согласованного слота
+          example: '2026-10-26T12:00:00+05:00'
+        latest_start:
+          type: string
+          format: date-time
+          description: Новый крайний срок начала выполнения работ
+          example: '2026-10-26T10:10:00+05:00'
+        deadline:
+          type: string
+          format: date-time
+          description: Новый контрольный срок выполнения
+          example: '2026-10-26T11:10:00+05:00'
+        required_ont:
+          type: integer
+          minimum: 0
+          description: Требуемое количество ONT
+          example: 1
+        required_router:
+          type: integer
+          minimum: 0
+          description: Требуемое количество роутеров
+          example: 1
+        required_stb:
+          type: integer
+          minimum: 0
+          description: Требуемое количество ТВ-приставок
+          example: 1
+        required_equipment:
+          $ref: '#/components/schemas/EquipmentDto'
+        is_repeat:
+          type: boolean
+          description: Признак повторного обращения
+          example: true
+        previous_order_id:
+          type: string
+          description: Код предыдущего наряда абонента
+          example: ORD-20261020-0045
+
+    WorkOrderResponse:
+      type: object
+      description: Информация о наряде на выполнение выездных работ
+      required:
+        - id
+        - order_id
+        - day_id
+        - day_date
+        - work_type_id
+        - work_type_code
+        - work_type_name
+        - building_id
+        - building_code
+        - address
+        - lat
+        - lon
+        - building_type
+        - requires_height
+        - access_node_id
+        - access_node_code
+        - registered_at
+        - slot
+        - slot_start
+        - slot_end
+        - latest_start
+        - deadline
+        - required_equipment
+        - is_repeat
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный внутренний идентификатор наряда (UUID)
+          example: 7ca85f64-5717-4562-b3fc-2c963f66afa9
+        order_id:
+          type: string
+          description: Уникальный строковый бизнес-код наряда
+          example: ORD-20261026-0001
+        day_id:
+          type: string
+          format: uuid
+          description: UUID рабочего дня
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        day_date:
+          type: string
+          format: date
+          description: Дата рабочего дня
+          example: '2026-10-26'
+        service_center_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: UUID сервисного центра зоны наряда
+          example: b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e
+        service_center_code:
+          type: string
+          nullable: true
+          description: Код сервисного центра зоны наряда
+          example: SC-01
+        work_type_id:
+          type: string
+          format: uuid
+          description: UUID типа работ
+          example: c3d4e5f6-a7b8-9c0d-1e2f-3a4b5c6d7e8f
+        work_type_code:
+          $ref: '#/components/schemas/WorkTypeCode'
+        work_type_name:
+          type: string
+          description: Наименование типа работ
+          example: 'Инсталляция ШПД/IPTV, многоквартирный дом, PON'
+        building_id:
+          type: string
+          format: uuid
+          description: UUID здания / объекта обслуживания
+          example: 4ba85f64-5717-4562-b3fc-2c963f66afa7
+        building_code:
+          type: string
+          description: Код здания из реестра
+          example: B-00412
+        address:
+          type: string
+          description: Фактический адрес объекта
+          example: 'г. Екатеринбург, ул. Учителей, 18'
+        lat:
+          type: number
+          format: double
+          description: Географическая широта объекта
+          example: 56.8712
+        lon:
+          type: number
+          format: double
+          description: Географическая долгота объекта
+          example: 60.6531
+        building_type:
+          $ref: '#/components/schemas/BuildingType'
+        requires_height:
+          type: boolean
+          description: Требуется ли допуск к работам на высоте (частный сектор с подключением по ВЛС)
+          example: false
+        access_node_id:
+          type: string
+          format: uuid
+          description: UUID узла доступа связи
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        access_node_code:
+          type: string
+          description: Код узла доступа связи
+          example: AN-0031
+        registered_at:
+          type: string
+          format: date-time
+          description: Момент регистрации наряда
+          example: '2026-10-25T14:30:00+05:00'
+        slot:
+          $ref: '#/components/schemas/TimeWindowDto'
+        slot_start:
+          type: string
+          format: date-time
+          description: Начало согласованного слота
+          example: '2026-10-26T09:00:00+05:00'
+        slot_end:
+          type: string
+          format: date-time
+          description: Окончание согласованного слота
+          example: '2026-10-26T11:00:00+05:00'
+        latest_start:
+          type: string
+          format: date-time
+          description: Крайний допустимый момент начала выполнения
+          example: '2026-10-26T09:10:00+05:00'
+        deadline:
+          type: string
+          format: date-time
+          description: Контрольный срок выполнения наряда
+          example: '2026-10-26T10:10:00+05:00'
+        required_equipment:
+          $ref: '#/components/schemas/EquipmentDto'
+        is_repeat:
+          type: boolean
+          description: Признак повторного обращения абонента в течение 7 дней
+          example: false
+        previous_order_id:
+          type: string
+          nullable: true
+          description: Код предыдущего наряда абонента (при повторном обращении)
+          example: ORD-20261020-0045
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+
+    DayInputDto:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: '2026-10-26'
+        now:
+          type: string
+          format: date-time
+          example: '2026-10-26T08:00:00+05:00'
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/DayOrderInputDto'
+        absent_staff:
+          type: array
+          items:
+            type: string
+          example: ['ST-003', 'ST-015']
+
+    DayOrderInputDto:
+      type: object
+      required: [order_id, building_id, registered_at]
+      properties:
+        order_id:
+          type: string
+          example: 'ORD-20261026-0001'
+        building_id:
+          type: string
+          example: 'B-00412'
+        work_type:
+          type: string
+          example: 'INST_PON_MKD'
+        registered_at:
+          type: string
+          format: date-time
+        slot:
+          $ref: '#/components/schemas/TimeWindowDto'
+        required_equipment:
+          $ref: '#/components/schemas/EquipmentDto'
+        is_repeat:
+          type: boolean
+          example: false
+
+    DayResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        current_now:
+          type: string
+          format: date-time
+        plan_version:
+          type: integer
+          example: 1
+        orders_count:
+          type: integer
+          example: 150
+        absent_staff_count:
+          type: integer
+          example: 2
+        absent_staff_codes:
+          type: array
+          items:
+            type: string
+          example: ['ST-003', 'ST-015']
+
+    PlanResponse:
+      type: object
+      properties:
+        day_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        plan_version:
+          type: integer
+        routes:
+          type: array
+          items:
+            type: object
+        pgp_groups:
+          type: array
+          items:
+            type: object
+        unassigned_orders:
+          type: array
+          items:
+            type: object
+        alerts:
+          type: array
+          items:
+            type: object
+        metrics:
+          type: object
+
+    EventInputDto:
+      type: object
+      required: [type, timestamp]
+      properties:
+        type:
+          type: string
+          example: 'ORDER_CANCELLED'
+        timestamp:
+          type: string
+          format: date-time
+        code:
+          type: string
+          example: 'EV-001'
+        order_id:
+          type: string
+          example: 'ORD-001'
+        staff_id:
+          type: string
+          example: 'ST-003'
+        reason:
+          type: string
+          example: 'CUSTOMER_REQUEST'
+
+    EventResultResponse:
+      type: object
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        type:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        processed_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+        plan:
+          $ref: '#/components/schemas/PlanResponse'
+
+    SolverRequest:
+      type: object
+      required: [date, now, service_centers, staff, orders]
+      properties:
+        date:
+          type: string
+          format: date
+        now:
+          type: string
+          format: date-time
+        service_centers:
+          type: array
+          items:
+            type: object
+        staff:
+          type: array
+          items:
+            type: object
+        orders:
+          type: array
+          items:
+            type: object
+
+    SolverResponse:
+      type: object
+      required: [status, execution_time_ms, routes, unassigned_orders]
+      properties:
+        status:
+          type: string
+          example: 'SUCCESS'
+        execution_time_ms:
+          type: integer
+          example: 45
+        routes:
+          type: array
+          items:
+            type: object
+        unassigned_orders:
+          type: array
+          items:
+            type: object
