@@ -1,26 +1,24 @@
-# Dockerfile for OSRM backend based on PBF file
-FROM jostmey/osrm-car:latest AS osrm-build
+# --- Этап 1: Сборка карты ---
+FROM osrm/osrm-backend:v5.27.1 AS builder
 
-# Install OSRM toolchain
-RUN apt-get update && apt-get install -y wget bzip2 && rm -rf /var/lib/apt-get/cache/*
+WORKDIR /data
 
-# Copy PBF file from build context
-COPY osrm/ural-fed-district-261113.osm.pbf /data/
+# Копируем ваш PBF (имя файла может быть любым)
+COPY osrm/*.osm.pbf /data/map.osm.pbf
 
-# Extract and prepare the OSRM map
-RUN osrm-extract /data/ural-fed-district-261113.osm.pbf
+# Выполняем сборку, используя универсальное имя map.osm.pbf
+RUN osrm-extract -p /opt/profiles/car.lua /data/map.osm.pbf && \
+    osrm-partition /data/map.osrm && \
+    osrm-customize /data/map.osrm
 
-# Generate the OSRM file
-RUN osrm-contract /data/ural-fed-district-261113.osm
+# --- Этап 2: Финальный образ ---
+FROM osrm/osrm-backend:v5.27.1
 
-# Final stage: runtime OSRM server
-FROM jostmey/osrm-car:latest
+WORKDIR /data
 
-# Copy the generated OSRM file from build stage
-COPY --from=osrm-build /data/ural-fed-district-261113.osrm /data/
+# Копируем ВСЕ файлы из папки builder без привязки к имени
+COPY --from=builder /data/ /data/
 
-# Expose the OSRM routing port
 EXPOSE 5000
 
-# Start the OSRM router
-CMD ["/osrm-routed", "/data/ural-fed-district-261113.osrm"]
+CMD ["osrm-routed", "--algorithm", "mld", "/data/map.osrm"]

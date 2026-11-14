@@ -33,7 +33,6 @@ services:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${POSTGRES_DB:-rostelecom}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_SCHEMA: ${POSTGRES_SCHEMA:-app}
       SERVER_PORT: ${SERVER_PORT:-8080}
       SECRET_KEY: ${SECRET_KEY:-}
@@ -49,10 +48,8 @@ services:
       dockerfile: Dockerfile
     container_name: osrm_router
     restart: unless-stopped
-    # The OSRM data directory is already populated with the PBF-extracted .osrm file
-    # The container was built with the PBF extracted during the build stage
-    volumes:
-      - ./map-module/osrm:/data:ro
+    # The OSRM .osrm file is generated during build and available at /data/map.osrm
+    # No need to mount volumes - the .osrm file is in the image
     ports:
       - "5000:5000"
     networks:
