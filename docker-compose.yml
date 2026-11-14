@@ -44,13 +44,15 @@ services:
 
   # OSRM Router for routing services
   osrm:
-    image: jostmey/osrm-car:latest
+    build:
+      context: ./map-module/osrm
+      dockerfile: Dockerfile
     container_name: osrm_router
     restart: unless-stopped
+    # The OSRM data directory is already populated with the PBF-extracted .osrm file
+    # The container was built with the PBF extracted during the build stage
     volumes:
       - ./map-module/osrm:/data:ro
-    command: >
-      /osrm-routed /data/ural-fed-district-261113.osm.pbf
     ports:
       - "5000:5000"
     networks:
