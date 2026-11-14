@@ -37,6 +37,7 @@ interface WorkOrderRepository : JpaRepository<WorkOrder, UUID>, JpaSpecification
     fun findAllByStatus(status: OrderStatus): List<WorkOrder>
 
     fun existsByDayId(dayId: UUID): Boolean
+    fun deleteAllByDayId(dayId: UUID): Long
     fun existsByWorkTypeId(workTypeId: UUID): Boolean
     fun existsByBuildingId(buildingId: UUID): Boolean
     fun existsByAccessNodeId(accessNodeId: UUID): Boolean
