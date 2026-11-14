@@ -12,11 +12,12 @@ import io.github.bbsk.c5d.model.reference.dto.ShiftDto
 import io.github.bbsk.c5d.model.reference.dto.response.StaffResponse
 import io.github.bbsk.c5d.model.reference.enums.Profile
 import io.github.bbsk.c5d.model.reference.enums.Technology
+import io.github.bbsk.c5d.service.ShiftService
 import io.github.bbsk.c5d.service.StaffService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.*
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.test.context.bean.override.mockito.MockitoBean

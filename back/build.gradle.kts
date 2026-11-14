@@ -66,10 +66,15 @@ tasks.withType<Test> {
 	useJUnitPlatform()
 }
 
+tasks.withType<Jar> {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
 tasks.register<Copy>("copyKotlinClasses") {
     from(layout.buildDirectory.dir("classes/kotlin/main"))
     into(layout.buildDirectory.dir("classes/java/main"))
     dependsOn("compileKotlin")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.named("classes") {

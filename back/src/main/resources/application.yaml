@@ -29,3 +29,7 @@ server:
   tomcat:
     max-swallow-size: 100MB
     max-http-form-post-size: 100MB
+
+app:
+  travel-matrix:
+    file-path: ${TRAVEL_MATRIX_FILE_PATH:travel_matrix.json}
