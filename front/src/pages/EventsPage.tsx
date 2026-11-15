@@ -2,227 +2,332 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
-import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Plus, Search, Loader2, RotateCcw, AlertTriangle, Clock, UserMinus, Package, ArrowRight, Trash2 } from 'lucide-react'
-import { useCreateEvent, usePlan, useDay, useOrders } from '@/hooks/useApi'
+import { Zap, Clock, UserMinus, XCircle, AlertTriangle, ArrowRight, Loader2, CheckCircle2, RotateCcw } from 'lucide-react'
+import { useCreateEvent, usePlan, useOrders, useStaff } from '@/hooks/useApi'
+import { useDayStore } from '@/store/dayStore'
 import { format } from 'date-fns'
-import { cn } from '@/utils/cn'
 
 const eventSchema = z.object({
   type: z.enum(['ORDER_CANCELLED', 'NEW_ORDER', 'STAFF_UNAVAILABLE', 'ORDER_TRANSFERRED', 'VISIT_DELAYED', 'TIME_TICK']),
-  timestamp: z.string().min(1, 'Время обязательно'),
-  orderId: z.string().optional(),
+  timestamp: z.string().min(1, 'Время события обязательно'),
+  orderCode: z.string().optional(),
+  staffCode: z.string().optional(),
   reason: z.string().optional(),
-  staffId: z.string().optional(),
+  delayMin: z.coerce.number().optional(),
 })
 
 type EventForm = z.infer<typeof eventSchema>
 
 const EVENT_TYPES = [
-  { value: 'ORDER_CANCELLED', label: 'Отмена наряда', icon: Trash2 },
-  { value: 'NEW_ORDER', label: 'Новый срочный наряд', icon: Plus },
-  { value: 'STAFF_UNAVAILABLE', label: 'Сотрудник недоступен', icon: UserMinus },
-  { value: 'ORDER_TRANSFERRED', label: 'Передача наряда в станцию', icon: Package },
-  { value: 'VISIT_DELAYED', label: 'Задержка на объекте', icon: Clock },
-  { value: 'TIME_TICK', label: 'Продвижение модельного времени', icon: RotateCcw },
+  { value: 'ORDER_CANCELLED', label: '❌ Отмена наряда (ORDER_CANCELLED)', desc: 'Клиент отказался от визита' },
+  { value: 'VISIT_DELAYED', label: '⏱️ Задержка на объекте (VISIT_DELAYED)', desc: 'Инженер задерживается на текущем адресе' },
+  { value: 'STAFF_UNAVAILABLE', label: '🚫 Инженер сошел с линии (STAFF_UNAVAILABLE)', desc: 'Болезнь, авария авто или сход сотрудника' },
+  { value: 'TIME_TICK', label: '🕒 Продвижение модельного времени (TIME_TICK)', desc: 'Сдвиг времени дня с фиксацией прошедших остановок' },
+  { value: 'ORDER_TRANSFERRED', label: '📦 Передача наряда на станцию (ORDER_TRANSFERRED)', desc: 'Перевод наряда на линейно-кабельный цех' },
 ]
 
 export const EventsPage = () => {
-  const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
-  const [activeTab, setActiveTab] = useState<string>('create')
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const { currentDate, setCurrentDate } = useDayStore()
+  const [successResult, setSuccessResult] = useState<any>(null)
+  const [errorMessage, setErrorMessage] = useState<string>('')
 
-  const { data: plan } = usePlan(selectedDate)
-  const { data: dayData } = useDay(selectedDate)
-  const { data: orders } = useOrders({ date: selectedDate })
+  const { data: plan, refetch: refetchPlan } = usePlan(currentDate)
+  const { data: orders = [] } = useOrders({ date: currentDate })
+  const { data: staffList = [] } = useStaff()
   const createEvent = useCreateEvent()
 
   const form = useForm<EventForm>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
       type: 'ORDER_CANCELLED',
-      timestamp: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm'),
-      orderId: '',
-      reason: '',
-      staffId: '',
+      timestamp: `${currentDate}T11:00`,
+      orderCode: '',
+      staffCode: '',
+      reason: 'Клиент не доступен',
+      delayMin: 30,
     },
   })
 
+  const selectedType = form.watch('type')
+
   const onSubmit = (data: EventForm) => {
-    const payload = {
+    setErrorMessage('')
+    setSuccessResult(null)
+
+    // Format ISO string with offset
+    const timeWithOffset = data.timestamp.length === 16 ? `${data.timestamp}:00+05:00` : data.timestamp
+
+    const payload: any = {
       type: data.type,
-      timestamp: data.timestamp,
-      orderId: data.orderId || undefined,
+      timestamp: timeWithOffset,
       reason: data.reason || undefined,
-      staffId: data.staffId || undefined,
     }
-    createEvent.mutate({ date: selectedDate, data: payload }, {
-      onSuccess: () => {
-        setDialogOpen(false)
-        form.reset({ type: 'ORDER_CANCELLED', timestamp: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm'), orderId: '', reason: '', staffId: '' })
-      },
-    })
+
+    if (data.orderCode) {
+      payload.order_id = data.orderCode
+    }
+    if (data.staffCode) {
+      payload.staff_id = data.staffCode
+    }
+    if (data.delayMin && data.type === 'VISIT_DELAYED') {
+      payload.delay_min = Number(data.delayMin)
+    }
+
+    createEvent.mutate(
+      { date: currentDate, data: payload },
+      {
+        onSuccess: (res: any) => {
+          setSuccessResult(res.data)
+          refetchPlan()
+        },
+        onError: (err: any) => {
+          setErrorMessage(err.response?.data?.message || 'Ошибка обработки события сервером')
+        },
+      }
+    )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Page Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">События и перепланирование</h1>
-          <p className="text-muted-foreground">Регистрация внешних событий в реальном времени с автоматическим реактивным перепланированием</p>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Zap className="h-7 w-7 text-amber-500" />
+            Оперативные события смены и реактивное перепланирование
+          </h1>
+          <p className="text-muted-foreground">
+            Регистрация форс-мажоров в течение смены (отмена наряда, сход инженера, задержка) с мгновенным перестроением маршрутов
+          </p>
         </div>
-        <div className="flex items-center gap-4">
-          <label className="text-sm text-muted-foreground">Дата:</label>
-          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm w-[180px]" />
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={currentDate}
+            onChange={(e) => e.target.value && setCurrentDate(e.target.value)}
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium"
+          />
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="create"><Plus className="mr-2 h-4 w-4" />Создать событие</TabsTrigger>
-          <TabsTrigger value="plan">План дня</TabsTrigger>
-          <TabsTrigger value="orders">Наряды</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="create">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Form Card (5 cols) */}
+        <div className="lg:col-span-5">
           <Card>
-            <CardHeader><CardTitle>Регистрация события</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <form onSubmit={form.handleSubmit(onSubmit)}>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Тип события</Label>
-                    <Select onValueChange={(value) => form.setValue('type', value as "ORDER_CANCELLED" | "NEW_ORDER" | "STAFF_UNAVAILABLE" | "ORDER_TRANSFERRED" | "VISIT_DELAYED" | "TIME_TICK")}>
-                      <SelectTrigger><SelectValue placeholder="Выберите тип" /></SelectTrigger>
+            <CardHeader>
+              <CardTitle className="text-lg">Регистрация события</CardTitle>
+              <CardDescription>
+                Выберите тип инцидента. Сервер заморозит выполненные остановки и выполнит решатель на лету.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {errorMessage && (
+                <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-xs flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 text-sm">
+                <div className="space-y-1.5">
+                  <Label>Тип события</Label>
+                  <Select
+                    value={selectedType}
+                    onValueChange={(val: any) => form.setValue('type', val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Выберите тип события" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EVENT_TYPES.map((et) => (
+                        <SelectItem key={et.value} value={et.value}>
+                          {et.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Модельное время наступления (timestamp)</Label>
+                  <Input type="datetime-local" {...form.register('timestamp')} />
+                </div>
+
+                {/* Conditional field: Order Selector */}
+                {(selectedType === 'ORDER_CANCELLED' ||
+                  selectedType === 'VISIT_DELAYED' ||
+                  selectedType === 'ORDER_TRANSFERRED') && (
+                  <div className="space-y-1.5">
+                    <Label>Наряд (код)</Label>
+                    <Select
+                      value={form.watch('orderCode')}
+                      onValueChange={(val) => form.setValue('orderCode', val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Выберите наряд" />
+                      </SelectTrigger>
                       <SelectContent>
-                        {EVENT_TYPES.map(et => <SelectItem key={et.value} value={et.value}>{et.label}</SelectItem>)}
+                        {orders.map((o: any) => (
+                          <SelectItem key={o.id} value={o.code || o.orderId}>
+                            {o.code || o.orderId}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Время события</Label>
-                    <Input type="datetime-local" {...form.register('timestamp')} />
+                )}
+
+                {/* Conditional field: Delay min */}
+                {selectedType === 'VISIT_DELAYED' && (
+                  <div className="space-y-1.5">
+                    <Label>Длительность задержки (минут)</Label>
+                    <Input type="number" min="5" step="5" {...form.register('delayMin')} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>ID наряда (для ORDER_CANCELLED, NEW_ORDER, ORDER_TRANSFERRED, VISIT_DELAYED)</Label>
-                    <Select onValueChange={(value) => form.setValue('orderId', value)}>
-                      <SelectTrigger><SelectValue placeholder="Выберите наряд" /></SelectTrigger>
+                )}
+
+                {/* Conditional field: Staff Selector */}
+                {selectedType === 'STAFF_UNAVAILABLE' && (
+                  <div className="space-y-1.5">
+                    <Label>Сотрудник / бригада (код)</Label>
+                    <Select
+                      value={form.watch('staffCode')}
+                      onValueChange={(val) => form.setValue('staffCode', val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Выберите сотрудника" />
+                      </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Не задан</SelectItem>
-                        {orders?.map((o: any) => <SelectItem key={o.id} value={o.id}>{o.code}</SelectItem>)}
+                        {staffList.map((st: any) => (
+                          <SelectItem key={st.id} value={st.code}>
+                            {st.code} — {st.displayName}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>ID сотрудника (для STAFF_UNAVAILABLE)</Label>
-                    <Input {...form.register('staffId')} placeholder="UUID сотрудника" />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>Причина / Комментарий</Label>
-                    <Input {...form.register('reason')} placeholder="Причина события" />
-                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <Label>Причина / Примечание</Label>
+                  <Input placeholder="Причина или пояснение" {...form.register('reason')} />
                 </div>
-                <div className="flex justify-end pt-4">
-                  <Button type="submit" disabled={createEvent.isPending}>
-                    {createEvent.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Отправка...
-                      </>
-                    ) : (
-                      <>
-                        <RotateCcw className="mr-2 h-4 w-4" />
-                        Зарегистрировать событие
-                      </>
-                    )}
-                  </Button>
-                </div>
+
+                <Button type="submit" disabled={createEvent.isPending} className="w-full">
+                  {createEvent.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Обработка события и перепланирование...
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Отправить событие на сервер
+                    </>
+                  )}
+                </Button>
               </form>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="plan">
-          {plan ? (
-            <Card>
-              <CardHeader><CardTitle>Текущий план дня</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-4">
-                    <Card><CardHeader className="pb-2"><CardTitle>Всего нарядов</CardTitle></CardHeader><CardContent className="text-3xl font-bold">{plan.metrics.totalOrders}</CardContent></Card>
-                    <Card><CardHeader className="pb-2"><CardTitle>Назначено</CardTitle></CardHeader><CardContent className="text-3xl font-bold text-green-500">{plan.metrics.assignedOrders}</CardContent></Card>
-                    <Card><CardHeader className="pb-2"><CardTitle>Нераспределено</CardTitle></CardHeader><CardContent className="text-3xl font-bold text-destructive">{plan.metrics.unassignedOrders}</CardContent></Card>
-                    <Card><CardHeader className="pb-2"><CardTitle>Маршрутов</CardTitle></CardHeader><CardContent className="text-3xl font-bold">{plan.metrics.activeRoutes}</CardContent></Card>
+        {/* Results & Live Plan Status Card (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
+          {successResult && (
+            <Card className="border-emerald-300 bg-emerald-50/40">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-emerald-800 text-base flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  Событие {successResult.code || successResult.type} успешно обработано!
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs space-y-2">
+                <p className="text-emerald-900 font-medium">{successResult.message}</p>
+                <div className="grid grid-cols-2 gap-2 bg-white p-2.5 rounded border border-emerald-200">
+                  <div>
+                    <span className="text-muted-foreground">Обработано в:</span>{' '}
+                    <strong>{successResult.processedAt ? successResult.processedAt.substring(11, 19) : '—'}</strong>
                   </div>
-                  {plan.alerts.length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-2">Алерты ({plan.alerts.length})</h4>
-                      <div className="space-y-2">
-                        {plan.alerts.map((alert: any) => (
-                          <Card key={alert.id} className="border-l-4 border-destructive"><CardContent className="py-3">
-                            <p className="font-medium">{alert.message}</p>
-                            <p className="text-sm text-muted-foreground">{alert.type} | {format(new Date(alert.createdAt), 'HH:mm:ss')}</p>
-                          </CardContent></Card>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {plan.unassignedOrders.length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-2">Нераспределенные наряды ({plan.unassignedOrders.length})</h4>
-                      <div className="space-y-2">
-                        {plan.unassignedOrders.map((uo: any) => (
-                          <Card key={uo.id} className="border-l-4 border-yellow-500"><CardContent className="py-3">
-                            <p className="font-medium">Наряд: {uo.orderId}</p>
-                            <p className="text-sm text-muted-foreground">Причина: {uo.reasonText}</p>
-                          </CardContent></Card>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <div>
+                    <span className="text-muted-foreground">Версия плана:</span>{' '}
+                    <strong>{successResult.plan?.planVersion ?? '—'}</strong>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          ) : (
-            <Card><CardContent className="py-8 text-center text-muted-foreground">План не рассчитан. Перейдите на вкладку «Планирование дня» и постройте план.</CardContent></Card>
           )}
-        </TabsContent>
 
-        <TabsContent value="orders">
           <Card>
-            <CardHeader><CardTitle>Наряды дня ({orders?.length || 0})</CardTitle></CardHeader>
-            <CardContent>
-              {orders && orders.length > 0 ? (
-                <Table>
-                  <TableHeader><TableRow><TableHead>Код</TableHead><TableHead>Здание</TableHead><TableHead>Тип работ</TableHead><TableHead>Слот</TableHead><TableHead>Статус</TableHead><TableHead>АО</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {orders.map((order: any) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-mono">{order.code}</TableCell>
-                        <TableCell>{order.buildingId?.slice(0, 8)}...</TableCell>
-                        <TableCell>{order.workTypeId?.slice(0, 8)}...</TableCell>
-                        <TableCell>{format(new Date(order.slotStart), 'HH:mm')} - {format(new Date(order.slotEnd), 'HH:mm')}</TableCell>
-                        <TableCell><Badge variant={order.status === 'ASSIGNED' ? 'success' : order.status === 'COMPLETED' ? 'secondary' : 'default'}>{order.status}</Badge></TableCell>
-                        <TableCell className="font-mono text-sm">ONT: {order.requiredOnt}, RTR: {order.requiredRouter}, STB: {order.requiredStb}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+            <CardHeader className="pb-3 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Актуальное состояние плана ({currentDate})</CardTitle>
+                {plan?.planVersion !== undefined && (
+                  <Badge variant="outline">Версия плана: v{plan.planVersion}</Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              {plan ? (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                    <div className="p-3 bg-muted/30 rounded-lg border">
+                      <span className="text-xs text-muted-foreground block">Нарядов</span>
+                      <strong className="text-xl">{plan.metrics?.totalOrders ?? 0}</strong>
+                    </div>
+                    <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200 text-emerald-800">
+                      <span className="text-xs text-emerald-600 block">Назначено</span>
+                      <strong className="text-xl">{plan.metrics?.assignedOrders ?? 0}</strong>
+                    </div>
+                    <div className="p-3 bg-red-50 rounded-lg border border-red-200 text-red-800">
+                      <span className="text-xs text-red-600 block">Не распределено</span>
+                      <strong className="text-xl">{plan.metrics?.unassignedOrders ?? 0}</strong>
+                    </div>
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-blue-800">
+                      <span className="text-xs text-blue-600 block">Маршрутов</span>
+                      <strong className="text-xl">{plan.metrics?.activeRoutes ?? 0}</strong>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">
+                      Маршруты бригад ({plan.routes?.length || 0})
+                    </h4>
+                    <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                      {plan.routes?.map((r: any) => (
+                        <div
+                          key={r.routeId}
+                          className="flex items-center justify-between p-2.5 rounded-lg border bg-background text-xs"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">{r.serviceCenterCode}</Badge>
+                            <span className="font-semibold">{r.staffCode}</span>
+                            <span className="text-muted-foreground">{r.staffName}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span>Нарядов: <strong>{r.totalOrders}</strong></span>
+                            <span>В пути: <strong>{Math.round(r.totalTravelSec / 60)} мин</strong></span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">Нарядов на этот день нет</div>
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  План еще не построен на эту дату.
+                </div>
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   )
 }

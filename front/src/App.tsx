@@ -10,6 +10,7 @@ import { WorkTypesPage } from '@/pages/WorkTypesPage'
 import { EventsPage } from '@/pages/EventsPage'
 import { PgpGroupsPage } from '@/pages/PgpGroupsPage'
 import { AlertsPage } from '@/pages/AlertsPage'
+import { AdminPage } from '@/pages/AdminPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { useAuthStore } from '@/store/authStore'
 import { useAuthCheck } from '@/hooks/useAuth'
@@ -17,12 +18,9 @@ import { useAuthCheck } from '@/hooks/useAuth'
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const user = useAuthStore((state) => state.user)
-  const { isLoading, isError, error, isSuccess } = useAuthCheck()
+  const { isLoading, isError, error } = useAuthCheck()
 
   const isAuthError = isError && (error as { response?: { status: number } })?.response?.status === 401
-
-  // No token in stored user = not authenticated
-  const hasToken = !!user?.token
 
   if (isLoading) {
     return (
@@ -32,7 +30,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     )
   }
 
-  if (!isAuthenticated || !hasToken || isAuthError || !isSuccess) {
+  if (!isAuthenticated || !user || isAuthError) {
     return <Navigate to="/login" replace />
   }
 
@@ -42,10 +40,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const user = useAuthStore((state) => state.user)
-  const hasToken = !!user?.token
 
-  // If user has valid token, redirect to home
-  if (isAuthenticated && hasToken) {
+  // If user is authenticated in store, redirect to dashboard
+  if (isAuthenticated && user) {
     return <Navigate to="/" replace />
   }
 
@@ -58,15 +55,17 @@ function App() {
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route path="/" element={<DashboardPage />} />
-        <Route path="/day-planning" element={<DayPlanningPage />} />
         <Route path="/map" element={<MapViewPage />} />
         <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/day-planning" element={<DayPlanningPage />} />
+        <Route path="/events" element={<EventsPage />} />
+        <Route path="/alerts" element={<AlertsPage />} />
+        <Route path="/pgp-groups" element={<PgpGroupsPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        {/* Retain individual admin paths for direct links / bookmarks */}
         <Route path="/staff" element={<StaffPage />} />
         <Route path="/buildings" element={<BuildingsPage />} />
         <Route path="/work-types" element={<WorkTypesPage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/pgp-groups" element={<PgpGroupsPage />} />
-        <Route path="/alerts" element={<AlertsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

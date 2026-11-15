@@ -1,0 +1,1 @@
+ALTER TABLE route_stop ALTER COLUMN location_code TYPE VARCHAR(255);

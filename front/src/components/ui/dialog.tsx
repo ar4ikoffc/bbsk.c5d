@@ -12,13 +12,11 @@ const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
     return (
       <div
         ref={ref}
-        className={cn('fixed inset-0 z-50 flex items-center justify-center', className)}
+        className={cn('fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto', className)}
         {...props}
       >
-        <div className="fixed inset-0 bg-black/50" onClick={() => onOpenChange?.(false)} />
-        <div className="relative z-50 w-full max-w-lg rounded-lg bg-background p-6 shadow-lg">
-          {children}
-        </div>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity" onClick={() => onOpenChange?.(false)} />
+        {children}
       </div>
     )
   }
@@ -67,7 +65,10 @@ const DialogContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('', className)}
+    className={cn(
+      'relative z-50 w-full max-w-lg rounded-xl bg-background p-6 shadow-2xl border my-auto transition-all',
+      className
+    )}
     {...props}
   >
     {children}

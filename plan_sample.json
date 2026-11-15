@@ -1,0 +1,453 @@
+﻿{
+    "day_id":  "42bd6379-1d83-4036-bd42-9f79b843f2f4",
+    "date":  "2026-11-15",
+    "plan_version":  2,
+    "routes":  [
+                   {
+                       "route_id":  "e3eeede6-8e18-4c5a-ae97-88719ef06956",
+                       "staff_id":  "014cc39d-a150-4488-bbdf-748d1b1e951b",
+                       "staff_code":  "TECH-01",
+                       "staff_name":  "ÐÐ²Ð°Ð½Ð¾Ð² ÐÐ²Ð°Ð½ ÐÐ²Ð°Ð½Ð¾Ð²Ð¸Ñ",
+                       "service_center_code":  "SC-01",
+                       "status":  "ACTIVE",
+                       "stops":  [
+                                     {
+                                         "id":  "6cd2689b-d612-4baf-8511-e68f82c917dd",
+                                         "seq":  1,
+                                         "type":  "DEPOT_START",
+                                         "order_id":  null,
+                                         "order_code":  null,
+                                         "location_code":  "SC-01",
+                                         "arrival":  "2026-11-15T08:00:00Z",
+                                         "start_time":  "2026-11-15T08:00:00Z",
+                                         "end_time":  "2026-11-15T08:00:00Z",
+                                         "travel_sec":  0,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  4,
+                                                                 "ROUTER":  2,
+                                                                 "STB":  2
+                                                             }
+                                     },
+                                     {
+                                         "id":  "d9de3a28-fa3b-4b19-bc79-5caea19f87f5",
+                                         "seq":  2,
+                                         "type":  "VISIT",
+                                         "order_id":  "143723ec-5e4a-473a-9e7d-b674b60a772b",
+                                         "order_code":  "ORD-20261115-1003",
+                                         "location_code":  "B-002",
+                                         "arrival":  "2026-11-15T08:15:00Z",
+                                         "start_time":  "2026-11-15T08:15:00Z",
+                                         "end_time":  "2026-11-15T08:55:00Z",
+                                         "travel_sec":  900,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  4,
+                                                                 "ROUTER":  2,
+                                                                 "STB":  2
+                                                             }
+                                     },
+                                     {
+                                         "id":  "1e541d8b-79c8-41d4-adde-ac28b057bb4f",
+                                         "seq":  3,
+                                         "type":  "VISIT",
+                                         "order_id":  "5f45a550-bc3c-46a9-a1ef-ef9a50aa3a46",
+                                         "order_code":  "ORD-20261115-1001",
+                                         "location_code":  "B-002",
+                                         "arrival":  "2026-11-15T08:55:00Z",
+                                         "start_time":  "2026-11-15T08:55:00Z",
+                                         "end_time":  "2026-11-15T09:35:00Z",
+                                         "travel_sec":  0,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  4,
+                                                                 "ROUTER":  2,
+                                                                 "STB":  2
+                                                             }
+                                     },
+                                     {
+                                         "id":  "37ea2edf-5a09-4748-b3c5-f364e396b5f7",
+                                         "seq":  4,
+                                         "type":  "VISIT",
+                                         "order_id":  "e442e79f-9bad-4782-9ba4-f5a0a64bbb11",
+                                         "order_code":  "ORD-20261115-1010",
+                                         "location_code":  "B-001",
+                                         "arrival":  "2026-11-15T09:50:00Z",
+                                         "start_time":  "2026-11-15T12:00:00Z",
+                                         "end_time":  "2026-11-15T15:00:00Z",
+                                         "travel_sec":  900,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  4,
+                                                                 "ROUTER":  2,
+                                                                 "STB":  2
+                                                             }
+                                     },
+                                     {
+                                         "id":  "caef311d-cf57-4bbb-9701-9c26fab53d99",
+                                         "seq":  5,
+                                         "type":  "VISIT",
+                                         "order_id":  "1ab99c21-7c06-4022-b13e-cdd981667f86",
+                                         "order_code":  "ORD-20261115-1007",
+                                         "location_code":  "B-001",
+                                         "arrival":  "2026-11-15T15:00:00Z",
+                                         "start_time":  "2026-11-15T15:00:00Z",
+                                         "end_time":  "2026-11-15T15:45:00Z",
+                                         "travel_sec":  0,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  4,
+                                                                 "ROUTER":  2,
+                                                                 "STB":  2
+                                                             }
+                                     },
+                                     {
+                                         "id":  "b98d7667-e882-4428-a6fc-7f2d87265c2f",
+                                         "seq":  6,
+                                         "type":  "DEPOT_END",
+                                         "order_id":  null,
+                                         "order_code":  null,
+                                         "location_code":  "SC-01",
+                                         "arrival":  "2026-11-15T16:00:00Z",
+                                         "start_time":  "2026-11-15T16:00:00Z",
+                                         "end_time":  "2026-11-15T16:00:00Z",
+                                         "travel_sec":  900,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  4,
+                                                                 "ROUTER":  2,
+                                                                 "STB":  2
+                                                             }
+                                     }
+                                 ],
+                       "total_travel_sec":  2700,
+                       "total_work_min":  305,
+                       "total_orders":  4
+                   },
+                   {
+                       "route_id":  "fc933e37-760b-42c8-a096-0050f30d1cc0",
+                       "staff_id":  "331831db-8fd4-44bf-9f41-1b36220174df",
+                       "staff_code":  "TECH-03",
+                       "staff_name":  "Ð¡Ð¸Ð´Ð¾ÑÐ¾Ð² ÐÐ»ÐµÐºÑÐµÐ¹ ÐÐ¸Ñ\u0085Ð°Ð¹Ð»Ð¾Ð²Ð¸Ñ",
+                       "service_center_code":  "SC-02",
+                       "status":  "ACTIVE",
+                       "stops":  [
+                                     {
+                                         "id":  "34f669da-f995-46f4-9ac3-6789e681cb5d",
+                                         "seq":  1,
+                                         "type":  "DEPOT_START",
+                                         "order_id":  null,
+                                         "order_code":  null,
+                                         "location_code":  "SC-02",
+                                         "arrival":  "2026-11-15T08:00:00Z",
+                                         "start_time":  "2026-11-15T08:00:00Z",
+                                         "end_time":  "2026-11-15T08:00:00Z",
+                                         "travel_sec":  0,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  3,
+                                                                 "ROUTER":  3,
+                                                                 "STB":  2
+                                                             }
+                                     },
+                                     {
+                                         "id":  "1e3c442f-6735-4256-95cc-a7011022b5cf",
+                                         "seq":  2,
+                                         "type":  "VISIT",
+                                         "order_id":  "5653fc9e-71f5-4a3f-b242-3d5e7cb6a7d5",
+                                         "order_code":  "ORD-20261115-1009",
+                                         "location_code":  "B-003",
+                                         "arrival":  "2026-11-15T08:15:00Z",
+                                         "start_time":  "2026-11-15T10:00:00Z",
+                                         "end_time":  "2026-11-15T11:30:00Z",
+                                         "travel_sec":  900,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  3,
+                                                                 "ROUTER":  3,
+                                                                 "STB":  2
+                                                             }
+                                     },
+                                     {
+                                         "id":  "7a6cc35a-01c9-4686-bc95-4274c2608c2f",
+                                         "seq":  3,
+                                         "type":  "VISIT",
+                                         "order_id":  "839ac92c-786c-48c5-b4b6-c1472c05150b",
+                                         "order_code":  "ORD-20261115-1008",
+                                         "location_code":  "B-003",
+                                         "arrival":  "2026-11-15T11:30:00Z",
+                                         "start_time":  "2026-11-15T11:30:00Z",
+                                         "end_time":  "2026-11-15T13:00:00Z",
+                                         "travel_sec":  0,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  3,
+                                                                 "ROUTER":  3,
+                                                                 "STB":  2
+                                                             }
+                                     },
+                                     {
+                                         "id":  "f9d03d7d-7e99-4fcd-8398-1157a116a6a6",
+                                         "seq":  4,
+                                         "type":  "BREAK",
+                                         "order_id":  null,
+                                         "order_code":  null,
+                                         "location_code":  "B-003",
+                                         "arrival":  "2026-11-15T13:00:00Z",
+                                         "start_time":  "2026-11-15T13:00:00Z",
+                                         "end_time":  "2026-11-15T14:00:00Z",
+                                         "travel_sec":  0,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  3,
+                                                                 "ROUTER":  3,
+                                                                 "STB":  2
+                                                             }
+                                     },
+                                     {
+                                         "id":  "eedb8d86-88f1-4dd2-9bba-7a23aa6365eb",
+                                         "seq":  5,
+                                         "type":  "VISIT",
+                                         "order_id":  "398cc3bb-e0e7-49b1-85cd-589c777340c6",
+                                         "order_code":  "ORD-20261115-1005",
+                                         "location_code":  "B-003",
+                                         "arrival":  "2026-11-15T14:00:00Z",
+                                         "start_time":  "2026-11-15T14:00:00Z",
+                                         "end_time":  "2026-11-15T14:40:00Z",
+                                         "travel_sec":  0,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  3,
+                                                                 "ROUTER":  3,
+                                                                 "STB":  2
+                                                             }
+                                     },
+                                     {
+                                         "id":  "ff15145e-2cef-454b-9c4d-05849e1721d9",
+                                         "seq":  6,
+                                         "type":  "VISIT",
+                                         "order_id":  "667a2c68-3001-4100-85f9-544d67e46abd",
+                                         "order_code":  "ORD-20261115-1004",
+                                         "location_code":  "B-003",
+                                         "arrival":  "2026-11-15T14:40:00Z",
+                                         "start_time":  "2026-11-15T14:40:00Z",
+                                         "end_time":  "2026-11-15T15:25:00Z",
+                                         "travel_sec":  0,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  3,
+                                                                 "ROUTER":  3,
+                                                                 "STB":  2
+                                                             }
+                                     },
+                                     {
+                                         "id":  "6c987e68-b5a1-4a60-a584-fc74b82b1698",
+                                         "seq":  7,
+                                         "type":  "DEPOT_END",
+                                         "order_id":  null,
+                                         "order_code":  null,
+                                         "location_code":  "SC-02",
+                                         "arrival":  "2026-11-15T15:40:00Z",
+                                         "start_time":  "2026-11-15T15:40:00Z",
+                                         "end_time":  "2026-11-15T15:40:00Z",
+                                         "travel_sec":  900,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  3,
+                                                                 "ROUTER":  3,
+                                                                 "STB":  2
+                                                             }
+                                     }
+                                 ],
+                       "total_travel_sec":  1800,
+                       "total_work_min":  265,
+                       "total_orders":  4
+                   },
+                   {
+                       "route_id":  "12e7b7c3-b29e-4b19-ba64-d58efff7cb80",
+                       "staff_id":  "2ceb9a85-f19d-4289-af01-c4991b3b25db",
+                       "staff_code":  "TECH-02",
+                       "staff_name":  "ÐÐµÑÑÐ¾Ð² ÐÐµÑÑ Ð¡ÐµÑÐ³ÐµÐµÐ²Ð¸Ñ",
+                       "service_center_code":  "SC-01",
+                       "status":  "ACTIVE",
+                       "stops":  [
+                                     {
+                                         "id":  "bec3905f-56d4-4c8e-bfe8-535231d23c0b",
+                                         "seq":  1,
+                                         "type":  "DEPOT_START",
+                                         "order_id":  null,
+                                         "order_code":  null,
+                                         "location_code":  "SC-01",
+                                         "arrival":  "2026-11-15T09:00:00Z",
+                                         "start_time":  "2026-11-15T09:00:00Z",
+                                         "end_time":  "2026-11-15T09:00:00Z",
+                                         "travel_sec":  0,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  2,
+                                                                 "ROUTER":  2,
+                                                                 "STB":  1
+                                                             }
+                                     },
+                                     {
+                                         "id":  "5d51ec3e-d9cd-4a92-b066-dbe8440c27d8",
+                                         "seq":  2,
+                                         "type":  "VISIT",
+                                         "order_id":  "02c12123-80bb-4dce-b43c-8fd96283fe37",
+                                         "order_code":  "ORD-20261115-1002",
+                                         "location_code":  "B-001",
+                                         "arrival":  "2026-11-15T09:15:00Z",
+                                         "start_time":  "2026-11-15T09:15:00Z",
+                                         "end_time":  "2026-11-15T10:15:00Z",
+                                         "travel_sec":  900,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  2,
+                                                                 "ROUTER":  2,
+                                                                 "STB":  1
+                                                             }
+                                     },
+                                     {
+                                         "id":  "e299657d-40a1-4f25-a82e-650527510fb4",
+                                         "seq":  3,
+                                         "type":  "VISIT",
+                                         "order_id":  "a129cbdf-ec78-4fd5-b4f2-1c7ed31ec7e8",
+                                         "order_code":  "ORD-20261115-1006",
+                                         "location_code":  "B-002",
+                                         "arrival":  "2026-11-15T10:30:00Z",
+                                         "start_time":  "2026-11-15T10:30:00Z",
+                                         "end_time":  "2026-11-15T11:30:00Z",
+                                         "travel_sec":  900,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  2,
+                                                                 "ROUTER":  2,
+                                                                 "STB":  1
+                                                             }
+                                     },
+                                     {
+                                         "id":  "a8f22114-986c-4f75-bf7f-da9d7f054004",
+                                         "seq":  4,
+                                         "type":  "BREAK",
+                                         "order_id":  null,
+                                         "order_code":  null,
+                                         "location_code":  "B-002",
+                                         "arrival":  "2026-11-15T13:00:00Z",
+                                         "start_time":  "2026-11-15T13:00:00Z",
+                                         "end_time":  "2026-11-15T14:00:00Z",
+                                         "travel_sec":  0,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  2,
+                                                                 "ROUTER":  2,
+                                                                 "STB":  1
+                                                             }
+                                     },
+                                     {
+                                         "id":  "5b0aa878-3083-4c54-a214-cc0bf891c5ab",
+                                         "seq":  5,
+                                         "type":  "DEPOT_END",
+                                         "order_id":  null,
+                                         "order_code":  null,
+                                         "location_code":  "SC-01",
+                                         "arrival":  "2026-11-15T14:15:00Z",
+                                         "start_time":  "2026-11-15T14:15:00Z",
+                                         "end_time":  "2026-11-15T14:15:00Z",
+                                         "travel_sec":  900,
+                                         "status":  "PLANNED",
+                                         "equipment_after":  {
+                                                                 "ONT":  2,
+                                                                 "ROUTER":  2,
+                                                                 "STB":  1
+                                                             }
+                                     }
+                                 ],
+                       "total_travel_sec":  2700,
+                       "total_work_min":  120,
+                       "total_orders":  2
+                   }
+               ],
+    "pgp_groups":  [
+
+                   ],
+    "unassigned_orders":  [
+
+                          ],
+    "alerts":  [
+                   {
+                       "id":  "fdd62b9e-ab42-4785-a869-b70d8d43507a",
+                       "code":  "ALT-LATE-ORD-20261115-1001",
+                       "type":  "LATE_RISK",
+                       "status":  "ACTIVE",
+                       "suggested_action":  "RESCHEDULE",
+                       "order_id":  "5f45a550-bc3c-46a9-a1ef-ef9a50aa3a46",
+                       "staff_id":  "014cc39d-a150-4488-bbdf-748d1b1e951b",
+                       "message":  "Ð Ð¸ÑÐº Ð¾Ð¿Ð¾Ð·Ð´Ð°Ð½Ð¸Ñ: Ð½Ð°ÑÑÐ´ ORD-20261115-1001, Ð¾Ð¶Ð¸Ð´Ð°ÐµÐ¼Ð¾Ðµ Ð¿ÑÐ¸Ð±ÑÑÐ¸Ðµ 2026-11-15T08:55Z, ÑÐ»Ð¾Ñ Ð´Ð¾ 2026-11-15T06:00Z",
+                       "created_at":  "2026-11-15T03:00:00Z"
+                   },
+                   {
+                       "id":  "46a65a61-0e5a-4891-b5fd-dc917d9c2edb",
+                       "code":  "ALT-LATE-ORD-20261115-1007",
+                       "type":  "LATE_RISK",
+                       "status":  "ACTIVE",
+                       "suggested_action":  "RESCHEDULE",
+                       "order_id":  "1ab99c21-7c06-4022-b13e-cdd981667f86",
+                       "staff_id":  "014cc39d-a150-4488-bbdf-748d1b1e951b",
+                       "message":  "Ð Ð¸ÑÐº Ð¾Ð¿Ð¾Ð·Ð´Ð°Ð½Ð¸Ñ: Ð½Ð°ÑÑÐ´ ORD-20261115-1007, Ð¾Ð¶Ð¸Ð´Ð°ÐµÐ¼Ð¾Ðµ Ð¿ÑÐ¸Ð±ÑÑÐ¸Ðµ 2026-11-15T15:00Z, ÑÐ»Ð¾Ñ Ð´Ð¾ 2026-11-15T08:00Z",
+                       "created_at":  "2026-11-15T03:00:00Z"
+                   },
+                   {
+                       "id":  "80712a98-4a39-482c-9cfa-9409b29f79ba",
+                       "code":  "ALT-LATE-ORD-20261115-1002",
+                       "type":  "LATE_RISK",
+                       "status":  "ACTIVE",
+                       "suggested_action":  "RESCHEDULE",
+                       "order_id":  "02c12123-80bb-4dce-b43c-8fd96283fe37",
+                       "staff_id":  "2ceb9a85-f19d-4289-af01-c4991b3b25db",
+                       "message":  "Ð Ð¸ÑÐº Ð¾Ð¿Ð¾Ð·Ð´Ð°Ð½Ð¸Ñ: Ð½Ð°ÑÑÐ´ ORD-20261115-1002, Ð¾Ð¶Ð¸Ð´Ð°ÐµÐ¼Ð¾Ðµ Ð¿ÑÐ¸Ð±ÑÑÐ¸Ðµ 2026-11-15T09:15Z, ÑÐ»Ð¾Ñ Ð´Ð¾ 2026-11-15T08:00Z",
+                       "created_at":  "2026-11-15T03:00:00Z"
+                   },
+                   {
+                       "id":  "8e72409c-4cc9-4539-9871-ddac34fa0311",
+                       "code":  "ALT-LATE-ORD-20261115-1006",
+                       "type":  "LATE_RISK",
+                       "status":  "ACTIVE",
+                       "suggested_action":  "RESCHEDULE",
+                       "order_id":  "a129cbdf-ec78-4fd5-b4f2-1c7ed31ec7e8",
+                       "staff_id":  "2ceb9a85-f19d-4289-af01-c4991b3b25db",
+                       "message":  "Ð Ð¸ÑÐº Ð¾Ð¿Ð¾Ð·Ð´Ð°Ð½Ð¸Ñ: Ð½Ð°ÑÑÐ´ ORD-20261115-1006, Ð¾Ð¶Ð¸Ð´Ð°ÐµÐ¼Ð¾Ðµ Ð¿ÑÐ¸Ð±ÑÑÐ¸Ðµ 2026-11-15T10:30Z, ÑÐ»Ð¾Ñ Ð´Ð¾ 2026-11-15T06:00Z",
+                       "created_at":  "2026-11-15T03:00:00Z"
+                   },
+                   {
+                       "id":  "a2cfbf3b-3f36-4041-a9fa-1d11ea90339a",
+                       "code":  "ALT-LATE-ORD-20261115-1008",
+                       "type":  "LATE_RISK",
+                       "status":  "ACTIVE",
+                       "suggested_action":  "RESCHEDULE",
+                       "order_id":  "839ac92c-786c-48c5-b4b6-c1472c05150b",
+                       "staff_id":  "331831db-8fd4-44bf-9f41-1b36220174df",
+                       "message":  "Ð Ð¸ÑÐº Ð¾Ð¿Ð¾Ð·Ð´Ð°Ð½Ð¸Ñ: Ð½Ð°ÑÑÐ´ ORD-20261115-1008, Ð¾Ð¶Ð¸Ð´Ð°ÐµÐ¼Ð¾Ðµ Ð¿ÑÐ¸Ð±ÑÑÐ¸Ðµ 2026-11-15T11:30Z, ÑÐ»Ð¾Ñ Ð´Ð¾ 2026-11-15T08:10Z",
+                       "created_at":  "2026-11-15T03:00:00Z"
+                   },
+                   {
+                       "id":  "9a4a2195-c291-4686-b581-13f909714aa8",
+                       "code":  "ALT-LATE-ORD-20261115-1004",
+                       "type":  "LATE_RISK",
+                       "status":  "ACTIVE",
+                       "suggested_action":  "RESCHEDULE",
+                       "order_id":  "667a2c68-3001-4100-85f9-544d67e46abd",
+                       "staff_id":  "331831db-8fd4-44bf-9f41-1b36220174df",
+                       "message":  "Ð Ð¸ÑÐº Ð¾Ð¿Ð¾Ð·Ð´Ð°Ð½Ð¸Ñ: Ð½Ð°ÑÑÐ´ ORD-20261115-1004, Ð¾Ð¶Ð¸Ð´Ð°ÐµÐ¼Ð¾Ðµ Ð¿ÑÐ¸Ð±ÑÑÐ¸Ðµ 2026-11-15T14:40Z, ÑÐ»Ð¾Ñ Ð´Ð¾ 2026-11-15T12:00Z",
+                       "created_at":  "2026-11-15T03:00:00Z"
+                   }
+               ],
+    "metrics":  {
+                    "total_orders":  10,
+                    "assigned_orders":  10,
+                    "unassigned_orders":  0,
+                    "pgp_orders":  0,
+                    "active_routes":  3,
+                    "total_travel_sec":  7200,
+                    "avg_travel_sec_per_route":  2400.0
+                }
+}

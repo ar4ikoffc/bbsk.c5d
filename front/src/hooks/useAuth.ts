@@ -11,10 +11,8 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: (data: { username: string; password: string }) => authApi.login(data),
     onSuccess: (response) => {
-      const user = response.data
-      // Backend returns { id, username, role, token } or { accessToken, user }
-      const token = response.data.token || response.data.accessToken
-      setUser({ ...user, token })
+      const user = response.data?.user || response.data
+      setUser(user)
       navigate('/')
     },
   })
@@ -25,11 +23,14 @@ export const useRegister = () => {
   const setUser = useAuthStore((state) => state.setUser)
 
   return useMutation({
-    mutationFn: (data: { username: string; password: string; role: string }) => authApi.register(data),
+    mutationFn: async (data: { username: string; password: string; role: string }) => {
+      await authApi.register(data)
+      const loginRes = await authApi.login({ username: data.username, password: data.password })
+      return loginRes
+    },
     onSuccess: (response) => {
-      const user = response.data
-      const token = response.data.token || response.data.accessToken
-      setUser({ ...user, token })
+      const user = response.data?.user || response.data
+      setUser(user)
       navigate('/')
     },
   })
@@ -52,7 +53,6 @@ export const useLogout = () => {
 
 export const useAuthCheck = () => {
   const setUser = useAuthStore((state) => state.setUser)
-  const currentUser = useAuthStore((state) => state.user)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const queryClient = useQueryClient()
 
@@ -64,23 +64,27 @@ export const useAuthCheck = () => {
     },
     enabled: isAuthenticated,
     retry: false,
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   })
 
   useEffect(() => {
     if (query.data) {
-      // Preserve token from store, only update user info from /me
-      setUser({ ...query.data, token: currentUser?.token })
+      const current = useAuthStore.getState().user
+      if (!current || current.username !== query.data.username || current.role !== query.data.role) {
+        setUser({ ...current, ...query.data })
+      }
     }
     const axiosError = query.error as { response?: { status: number } } | null
     if (axiosError && axiosError.response?.status === 401) {
-      setUser(null)
-      queryClient.removeQueries({ queryKey: ['auth', 'me'] })
+      if (useAuthStore.getState().isAuthenticated) {
+        setUser(null)
+        queryClient.removeQueries({ queryKey: ['auth', 'me'] })
+      }
     }
-  }, [query.data, query.error, setUser, queryClient, currentUser])
+  }, [query.data, query.error, setUser, queryClient])
 
   return query
 }

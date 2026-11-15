@@ -92,8 +92,10 @@ export const workTypesApi = {
 }
 
 export const referenceApi = {
-  init: () => api.put('/v1/reference'),
-  travelMatrix: () => api.put('/v1/reference/travel-matrix'),
+  loadReference: (data: any) => api.put('/v1/reference', data),
+  loadTravelMatrix: (data: any) => api.put('/v1/reference/travel-matrix', data),
+  init: (data?: any) => api.put('/v1/reference', data || {}),
+  travelMatrix: (data?: any) => api.put('/v1/reference/travel-matrix', data || {}),
 }
 
 export const ordersApi = {

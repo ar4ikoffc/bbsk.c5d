@@ -25,7 +25,7 @@ class RouteStop(
     @Column(name = "type", nullable = false, length = 16)
     var type: StopType,
 
-    @Column(name = "location_code", nullable = false, length = 32)
+    @Column(name = "location_code", nullable = false, length = 255)
     var locationCode: String,
 
     @ManyToOne(fetch = FetchType.LAZY)

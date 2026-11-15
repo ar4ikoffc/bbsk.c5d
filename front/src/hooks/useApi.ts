@@ -181,10 +181,31 @@ export const useCreateWorkType = () => {
 }
 
 // Reference hooks
+export const useLoadReference = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: any) => referenceApi.loadReference(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] })
+      queryClient.invalidateQueries({ queryKey: ['shifts'] })
+      queryClient.invalidateQueries({ queryKey: ['serviceCenters'] })
+      queryClient.invalidateQueries({ queryKey: ['accessNodes'] })
+      queryClient.invalidateQueries({ queryKey: ['buildings'] })
+      queryClient.invalidateQueries({ queryKey: ['workTypes'] })
+    },
+  })
+}
+
+export const useLoadTravelMatrix = () => {
+  return useMutation({
+    mutationFn: (data: any) => referenceApi.loadTravelMatrix(data),
+  })
+}
+
 export const useInitReference = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => referenceApi.init(),
+    mutationFn: (data?: any) => referenceApi.init(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] })
       queryClient.invalidateQueries({ queryKey: ['shifts'] })
@@ -198,7 +219,7 @@ export const useInitReference = () => {
 
 export const useInitTravelMatrix = () => {
   return useMutation({
-    mutationFn: () => referenceApi.travelMatrix(),
+    mutationFn: (data?: any) => referenceApi.travelMatrix(data),
   })
 }
 

@@ -31,7 +31,11 @@ type WorkTypeForm = z.infer<typeof workTypeSchema>
 const PROFILES = ['INSTALL', 'LTP3']
 const DEADLINE_KINDS = ['WORKING_DAYS', 'HOURS', 'SLOT']
 
-export const WorkTypesPage = () => {
+interface WorkTypesPageProps {
+  hideTitle?: boolean
+}
+
+export const WorkTypesPage = ({ hideTitle = false }: WorkTypesPageProps) => {
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingWt, setEditingWt] = useState<any>(null)
@@ -83,10 +87,12 @@ export const WorkTypesPage = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Типы работ</h1>
-          <p className="text-muted-foreground">Справочник нормативных работ со сроками выполнения и требуемыми квалификациями</p>
-        </div>
+        {!hideTitle ? (
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Типы работ</h1>
+            <p className="text-muted-foreground">Справочник нормативных работ со сроками выполнения и требуемыми квалификациями</p>
+          </div>
+        ) : <div />}
         <Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" />
           Добавить тип работ
