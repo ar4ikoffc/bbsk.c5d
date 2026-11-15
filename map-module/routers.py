@@ -12,6 +12,48 @@ from enum import Enum
 router = APIRouter(prefix="/api", tags=["routing"])
 
 # ============================================================
+# BUILDINGS DATA LOADING
+# ============================================================
+
+def get_buildings_json_path() -> str:
+    """Get path to buildings.json from env var or default location."""
+    env_path = os.getenv("BUILDINGS_JSON_PATH")
+    if env_path:
+        return env_path
+    # Project root is parent of bbsk.c5d (i.e., G:\SHIIIIT)
+    current_dir = os.path.dirname(os.path.abspath(__file__))  # map-module
+    project_root = os.path.dirname(os.path.dirname(current_dir))  # SHIIIIT
+    return os.path.join(project_root, "data", "buildings.json")
+
+
+def load_buildings_data() -> dict:
+    """Load buildings data from JSON file."""
+    path = get_buildings_json_path()
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Buildings data file not found at: {path}")
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+_buildings_cache = None
+
+
+def get_buildings_data() -> dict:
+    """Get cached buildings data, loading on first call."""
+    global _buildings_cache
+    if _buildings_cache is None:
+        _buildings_cache = load_buildings_data()
+    return _buildings_cache
+
+
+def reload_buildings_data() -> dict:
+    """Force reload buildings data from file."""
+    global _buildings_cache
+    _buildings_cache = load_buildings_data()
+    return _buildings_cache
+
+
+# ============================================================
 # TYPES & MODELS
 # ============================================================
 
@@ -84,6 +126,31 @@ class ReequipmentRequest(BaseModel):
     current_equipment_count: int
     required_equipment_count: int
     start_point_id: str
+
+
+# ============================================================
+# BUILDINGS DATA MODELS
+# ============================================================
+
+class HourlyFactor(BaseModel):
+    hour: int
+    factor: float
+
+
+class TravelMatrixRequest(BaseModel):
+    matrix_id: str
+    points: List[str]
+    durations_sec: List[List[int]]
+    distances_m: List[List[int]]
+    hourly_factors: List[HourlyFactor]
+
+
+class BuildingsResponse(BaseModel):
+    matrix_id: str
+    points: List[str]
+    durations_sec: List[List[int]]
+    distances_m: List[List[int]]
+    hourly_factors: List[HourlyFactor]
 
 
 # ============================================================
@@ -291,6 +358,40 @@ async def plan_reequipment(request: ReequipmentRequest):
             "required_equipment": request.required_equipment_count
         }
     }
+
+
+# ============================================================
+# BUILDINGS ENDPOINTS
+# ============================================================
+
+@router.get("/buildings", response_model=BuildingsResponse)
+async def get_buildings():
+    """Get buildings travel matrix data."""
+    try:
+        data = get_buildings_data()
+        return data
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Invalid JSON format: {e}")
+
+
+@router.post("/buildings/reload")
+async def reload_buildings():
+    """Force reload buildings data from file."""
+    try:
+        data = reload_buildings_data()
+        return {"status": "reloaded", "matrix_id": data.get("matrix_id")}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Invalid JSON format: {e}")
+
+
+@router.get("/buildings/path")
+async def get_buildings_path():
+    """Get the current buildings.json file path being used."""
+    return {"path": get_buildings_json_path()}
 
 
 # ============================================================
