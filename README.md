@@ -2,11 +2,11 @@
 UISI Hackathon case 5
 
 Participants:
-- ar4ikoffc (Deulin A.L., PE-31b)
-- poppurindayo (Krikunov O.D., IT-32b)
-- cotonetrash (Kochurov A.A., IT-32b)
-- "sign here" (Simakov G.O., IT-32b)
-- "sign here" (Sidorov A.O., IT-32b)
+- Деулин А.Л. ПЕ-31б (Ar4ikoffc)
+- Крикунов О.Д. ИТ-32б (poppurindayo)
+- Кочуров А.А. ИТ-32б (cotonetrash)
+- Симаков Г.О. ИТ-32б (uzer2232)
+- Сидоров А.О. ИТ-32б
 
 ---
 
@@ -214,3 +214,26 @@ docker compose up -d postgres
   ```
 
 Приложение подключится к запущенной в Docker базе данных PostgreSQL и применит необходимые миграции схемы.
+
+### 3. Запуск solver (Python FastAPI)
+
+Для работы функционала построения маршрутов запустите solver в отдельном терминале:
+
+```bash
+cd map-module
+python -m uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+Solver станет доступен по адресу `http://localhost:8000`.
+
+### 4. Запуск фронтенда
+
+Для доступа к интерфейсу фронтента в отдельном терминале:
+
+```bash
+cd front
+npm install
+npm run dev
+```
+
+Фронтенд будет доступен по адресу `http://localhost:5173`.
