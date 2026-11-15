@@ -1,6 +1,7 @@
 package io.github.bbsk.c5d.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import io.github.bbsk.c5d.exception.BadRequestException
 import io.github.bbsk.c5d.exception.NotFoundException
 import io.github.bbsk.c5d.model.day.dto.request.DayOrderInputDto
@@ -41,7 +42,8 @@ class EventService(
     private val planService: PlanService
 ) {
 
-    private val objectMapper = ObjectMapper()
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val objectMapper: ObjectMapper = ObjectMapper().registerModule(JavaTimeModule())
 
     @Transactional
     fun processEvent(targetDate: LocalDate, dto: EventInputDto): EventResultResponse {
