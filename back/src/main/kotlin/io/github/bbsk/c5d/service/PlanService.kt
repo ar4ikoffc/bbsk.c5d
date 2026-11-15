@@ -74,7 +74,7 @@ class PlanService(
             serviceCenters = serviceCenters.map { sc ->
                 SolverServiceCenterDto(
                     id = sc.code,
-                    buildingId = sc.address, // или building code
+                    buildingId = sc.code,
                     openFrom = sc.openTime.toString().substring(0, 5),
                     openTo = sc.closeTime.toString().substring(0, 5),
                     restockDurationMin = sc.restockDurationMin
@@ -160,7 +160,7 @@ class PlanService(
                     route = route,
                     seq = stopDto.seq,
                     type = stopType,
-                    locationCode = stopDto.buildingId,
+                    locationCode = stopDto.buildingId.take(255),
                     order = order,
                     arrival = stopDto.arrival,
                     startTime = stopDto.start,

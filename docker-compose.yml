@@ -93,6 +93,20 @@ services:
     networks:
       - bbsk-network
 
+  # Frontend
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: bbsk-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - bbsk-network
+
 volumes:
   postgres_data:
     driver: local

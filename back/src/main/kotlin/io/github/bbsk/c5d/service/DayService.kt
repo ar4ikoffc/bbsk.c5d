@@ -50,7 +50,16 @@ class DayService(
             unassignedOrderRepository.deleteAllByDayId(day.id)
             routeRepository.deleteAllByDayId(day.id)
             pgpGroupRepository.deleteAllByDayId(day.id)
-            workOrderRepository.deleteAllByDayId(day.id)
+
+            // Remove day orders that are not in the new requested pool
+            val requestedCodes = request.orders.map { it.orderId.trim() }.toSet()
+            val existingDayOrders = workOrderRepository.findAllByDayId(day.id)
+            val ordersToRemove = existingDayOrders.filter { it.code !in requestedCodes }
+            if (ordersToRemove.isNotEmpty()) {
+                workOrderRepository.deleteAll(ordersToRemove)
+            }
+            workOrderRepository.flush()
+
             day.absentStaff.clear()
             day.currentNow = currentNow
             day.planVersion = 1
@@ -72,9 +81,16 @@ class DayService(
         day.absentStaff.addAll(absentStaffEntities)
         day = workDayRepository.save(day)
 
-        // Process orders
+        // Process orders (upsert existing or create new)
         val ordersToSave = request.orders.map { orderDto ->
-            mapToWorkOrder(orderDto, day)
+            val code = orderDto.orderId.trim()
+            val existing = workOrderRepository.findByCode(code)
+            if (existing != null) {
+                applyDtoToWorkOrder(existing, orderDto, day)
+                existing
+            } else {
+                mapToWorkOrder(orderDto, day)
+            }
         }
 
         workOrderRepository.saveAll(ordersToSave)
@@ -164,6 +180,57 @@ class DayService(
             previousOrderId = orderDto.previousOrderId?.trim(),
             status = OrderStatus.PENDING
         )
+    }
+
+    private fun applyDtoToWorkOrder(order: WorkOrder, orderDto: DayOrderInputDto, day: WorkDay) {
+        val building = resolveBuilding(orderDto.buildingId.trim())
+            ?: throw BadRequestException("BUILDING_NOT_FOUND", "Здание '${orderDto.buildingId}' для наряда '${order.code}' не найдено")
+
+        val workType = resolveWorkType(orderDto.workTypeId?.trim() ?: orderDto.workTypeCode?.trim())
+            ?: throw BadRequestException("WORK_TYPE_NOT_FOUND", "Тип работ для наряда '${order.code}' не найден")
+
+        val accessNode = if (!orderDto.accessNodeId.isNullOrBlank()) {
+            resolveAccessNode(orderDto.accessNodeId.trim())
+                ?: throw BadRequestException("ACCESS_NODE_NOT_FOUND", "Узел доступа '${orderDto.accessNodeId}' не найден")
+        } else {
+            building.accessNode
+        }
+
+        val serviceCenter = if (!orderDto.serviceCenterId.isNullOrBlank()) {
+            resolveServiceCenter(orderDto.serviceCenterId.trim())
+                ?: throw BadRequestException("SERVICE_CENTER_NOT_FOUND", "Сервисный центр '${orderDto.serviceCenterId}' не найден")
+        } else {
+            building.zoneServiceCenter
+        }
+
+        val resolvedSlotStart = orderDto.slot?.start ?: orderDto.slotStart
+            ?: throw BadRequestException("SLOT_REQUIRED", "Для наряда '${order.code}' не указано начало слота")
+        val resolvedSlotEnd = orderDto.slot?.end ?: orderDto.slotEnd
+            ?: throw BadRequestException("SLOT_REQUIRED", "Для наряда '${order.code}' не указано окончание слота")
+
+        val latestStart = orderDto.latestStart ?: calculateLatestStart(resolvedSlotStart, resolvedSlotEnd, workType)
+        val deadline = orderDto.deadline ?: calculateDeadline(latestStart, resolvedSlotEnd, workType)
+
+        val ont = orderDto.requiredEquipment?.ont ?: 0
+        val router = orderDto.requiredEquipment?.router ?: 0
+        val stb = orderDto.requiredEquipment?.stb ?: 0
+
+        order.day = day
+        order.serviceCenter = serviceCenter
+        order.workType = workType
+        order.building = building
+        order.accessNode = accessNode
+        order.registeredAt = orderDto.registeredAt
+        order.slotStart = resolvedSlotStart
+        order.slotEnd = resolvedSlotEnd
+        order.latestStart = latestStart
+        order.deadline = deadline
+        order.requiredOnt = ont
+        order.requiredRouter = router
+        order.requiredStb = stb
+        order.isRepeat = orderDto.isRepeat
+        order.previousOrderId = orderDto.previousOrderId?.trim()
+        order.status = OrderStatus.PENDING
     }
 
     private fun resolveStaff(ref: String): io.github.bbsk.c5d.model.reference.entity.Staff? {
