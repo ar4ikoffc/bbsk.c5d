@@ -1,0 +1,118 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bbsk-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rostelecom}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-rostelecom}"]
+      interval: 60m
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+      start_interval: 2s
+    networks:
+      - bbsk-network
+
+  backend:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    container_name: bbsk-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      solver:
+        condition: service_healthy
+    environment:
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-rostelecom}
+      POSTGRES_SCHEMA: ${POSTGRES_SCHEMA:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      SECRET_KEY: ${SECRET_KEY:-}
+      TRAVEL_MATRIX_FILE_PATH: ${TRAVEL_MATRIX_FILE_PATH:-/app/data/travel_matrix.json}
+      SOLVER_URL: ${SOLVER_URL:-http://solver:8000}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/v1/health > /dev/null 2>&1 || exit 1"]
+      interval: 60m
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+      start_interval: 2s
+    volumes:
+      - shared_data:/app/data
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    networks:
+      - bbsk-network
+
+  solver:
+    build:
+      context: ./map-module
+      dockerfile: Dockerfile
+    container_name: bbsk-solver
+    restart: unless-stopped
+    environment:
+      TRAVEL_MATRIX_FILE_PATH: ${TRAVEL_MATRIX_FILE_PATH:-/app/data/travel_matrix.json}
+      HOST: 0.0.0.0
+      PORT: 8000
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      interval: 60m
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+      start_interval: 2s
+    volumes:
+      - shared_data:/app/data
+    ports:
+      - "8000:8000"
+    networks:
+      - bbsk-network
+
+  # OSRM Router for routing services
+  osrm:
+    build:
+      context: ./map-module/osrm
+      dockerfile: Dockerfile
+    container_name: osrm_router
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    networks:
+      - bbsk-network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: bbsk-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - bbsk-network
+
+volumes:
+  postgres_data:
+    driver: local
+  shared_data:
+    driver: local
+
+networks:
+  bbsk-network:
+    driver: bridge
