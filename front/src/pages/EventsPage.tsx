@@ -175,11 +175,24 @@ export const EventsPage = () => {
                         <SelectValue placeholder="Выберите наряд" />
                       </SelectTrigger>
                       <SelectContent>
-                        {orders.map((o: any) => (
-                          <SelectItem key={o.id} value={o.code || o.orderId}>
-                            {o.code || o.orderId}
-                          </SelectItem>
-                        ))}
+                        {orders.length === 0 ? (
+                          <div className="p-3 text-xs text-muted-foreground text-center">
+                            Наряды не найдены на дату {currentDate}
+                          </div>
+                        ) : (
+                          orders.map((o: any) => {
+                            const code = o.order_id || o.code || o.orderId || o.id
+                            const addr = o.address || o.building_code || ''
+                            const wt = o.work_type_name || o.work_type_code || ''
+                            return (
+                              <SelectItem key={o.id || code} value={code}>
+                                <span className="font-mono font-semibold text-primary">{code}</span>
+                                {addr && <span className="ml-1.5 text-muted-foreground">({addr})</span>}
+                                {wt && <span className="ml-1 text-[11px] text-muted-foreground">[{wt}]</span>}
+                              </SelectItem>
+                            )
+                          })
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -205,11 +218,22 @@ export const EventsPage = () => {
                         <SelectValue placeholder="Выберите сотрудника" />
                       </SelectTrigger>
                       <SelectContent>
-                        {staffList.map((st: any) => (
-                          <SelectItem key={st.id} value={st.code}>
-                            {st.code} — {st.displayName}
-                          </SelectItem>
-                        ))}
+                        {staffList.length === 0 ? (
+                          <div className="p-3 text-xs text-muted-foreground text-center">
+                            Сотрудники не найдены
+                          </div>
+                        ) : (
+                          staffList.map((st: any) => {
+                            const staffCode = st.staff_id || st.staffId || st.code || st.id
+                            const staffName = st.display_name || st.displayName || ''
+                            return (
+                              <SelectItem key={st.id || staffCode} value={staffCode}>
+                                <span className="font-mono font-semibold">{staffCode}</span>
+                                {staffName && <span className="ml-1.5 text-muted-foreground">({staffName})</span>}
+                              </SelectItem>
+                            )
+                          })
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -253,11 +277,17 @@ export const EventsPage = () => {
                 <div className="grid grid-cols-2 gap-2 bg-white p-2.5 rounded border border-emerald-200">
                   <div>
                     <span className="text-muted-foreground">Обработано в:</span>{' '}
-                    <strong>{successResult.processedAt ? successResult.processedAt.substring(11, 19) : '—'}</strong>
+                    <strong>
+                      {successResult.processed_at || successResult.processedAt
+                        ? (successResult.processed_at || successResult.processedAt).substring(11, 19)
+                        : '—'}
+                    </strong>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Версия плана:</span>{' '}
-                    <strong>{successResult.plan?.planVersion ?? '—'}</strong>
+                    <strong>
+                      v{successResult.plan?.plan_version ?? successResult.plan?.planVersion ?? successResult.planVersion ?? plan?.planVersion ?? '—'}
+                    </strong>
                   </div>
                 </div>
               </CardContent>

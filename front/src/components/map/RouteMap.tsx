@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react'
+import React, { useMemo, useEffect, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { Badge } from '@/components/ui/badge'
@@ -173,6 +173,9 @@ export const RouteMap: React.FC<RouteMapProps> = ({
   showUnassignedOrders = true,
   className = 'h-[600px] w-full rounded-lg border shadow-sm overflow-hidden',
 }) => {
+  // Store real road polylines from OSRM
+  const [roadGeometries, setRoadGeometries] = useState<Record<string, [number, number][]>>({})
+
   // Build fast lookups by code and id
   const locationLookup = useMemo(() => {
     const map = new Map<string, { lat: number; lon: number; address: string; name?: string; type: 'SC' | 'BLD' | 'NODE' }>()
@@ -208,19 +211,23 @@ export const RouteMap: React.FC<RouteMapProps> = ({
   const processedRoutes = useMemo(() => {
     return routes.map((route, idx) => {
       const color = ROUTE_COLORS[idx % ROUTE_COLORS.length]
-      const isSelected = selectedRouteId === route.routeId
+      const routeId = (route as any).route_id || route.routeId || (route as any).id
+      const isSelected = selectedRouteId === routeId
 
-      const stopsWithCoords = route.stops
-        .map((stop) => {
-          const loc = locationLookup.get(stop.locationCode)
+      const stopsWithCoords = (route.stops || [])
+        .map((stop: any) => {
+          const locCode = stop.locationCode || stop.location_code
+          const loc = locCode ? locationLookup.get(locCode) : undefined
           return {
             ...stop,
+            locationCode: locCode,
+            orderId: stop.orderCode || stop.order_code || stop.orderId || stop.order_id,
             lat: loc?.lat,
             lon: loc?.lon,
-            address: loc?.address || stop.locationCode,
+            address: loc?.address || locCode,
           }
         })
-        .filter((s): s is RouteStop & { lat: number; lon: number; address: string } => !!s.lat && !!s.lon)
+        .filter((s: any): s is RouteStop & { lat: number; lon: number; address: string } => !!s.lat && !!s.lon)
 
       const polylinePoints = stopsWithCoords.map((s) => [s.lat, s.lon] as [number, number])
 
@@ -233,6 +240,46 @@ export const RouteMap: React.FC<RouteMapProps> = ({
       }
     })
   }, [routes, selectedRouteId, locationLookup])
+
+  // Fetch real road geometries from OSRM for each route
+  useEffect(() => {
+    let isMounted = true
+
+    processedRoutes.forEach(async (route) => {
+      const stops = route.stopsWithCoords
+      if (stops.length < 2) return
+
+      const coordsStr = stops.map((s) => `${s.lon},${s.lat}`).join(';')
+      const url = `/osrm/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`
+
+      try {
+        let res: Response | null = null
+        try {
+          res = await fetch(url)
+        } catch {
+          res = await fetch(`http://localhost:5000/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`)
+        }
+
+        if (res && res.ok) {
+          const data = await res.json()
+          const coords = data?.routes?.[0]?.geometry?.coordinates
+          if (Array.isArray(coords) && coords.length > 0 && isMounted) {
+            const leafletPoints: [number, number][] = coords.map(([lon, lat]: [number, number]) => [lat, lon])
+            setRoadGeometries((prev: Record<string, [number, number][]>) => ({
+              ...prev,
+              [route.routeId]: leafletPoints,
+            }))
+          }
+        }
+      } catch {
+        // Fallback to straight lines
+      }
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [processedRoutes])
 
   // Calculate bounding box for auto-fit
   const mapBounds = useMemo(() => {
@@ -370,10 +417,10 @@ export const RouteMap: React.FC<RouteMapProps> = ({
 
           return (
             <React.Fragment key={route.routeId}>
-              {/* Route Polyline track */}
+              {/* Route Polyline track (OSRM road geometry or fallback to Euclidean points) */}
               {route.polylinePoints.length > 1 && (
                 <Polyline
-                  positions={route.polylinePoints}
+                  positions={roadGeometries[route.routeId] || route.polylinePoints}
                   pathOptions={{
                     color: route.color,
                     weight,

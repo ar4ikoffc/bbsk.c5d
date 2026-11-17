@@ -134,9 +134,20 @@ class PlanService(
         // 5. Вызов Python Solver
         val solverResponse = solverClient.optimize(solverRequest)
 
-        // 6. Очистка старых маршрутов и нераспределенных заказов дня
-        routeRepository.deleteAllByDayId(day.id)
-        unassignedOrderRepository.deleteAllByDayId(day.id)
+        // 6. Очистка старых маршрутов, нераспределенных заказов и алертов опоздания дня с принудительным flush
+        val existingRoutes = routeRepository.findAllByDayId(day.id)
+        routeRepository.deleteAll(existingRoutes)
+        routeRepository.flush()
+
+        val existingUnassigned = unassignedOrderRepository.findAllByDayId(day.id)
+        unassignedOrderRepository.deleteAll(existingUnassigned)
+        unassignedOrderRepository.flush()
+
+        val existingLateAlerts = alertRepository.findAllByDayId(day.id).filter { it.type == AlertType.LATE_RISK }
+        if (existingLateAlerts.isNotEmpty()) {
+            alertRepository.deleteAll(existingLateAlerts)
+            alertRepository.flush()
+        }
 
         // 7. Сохранение результатов оптимизации
         val savedRoutes = mutableListOf<Route>()

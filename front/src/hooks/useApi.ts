@@ -250,7 +250,15 @@ export const useDay = (date: string) => {
     queryKey: ['day', date],
     queryFn: async () => {
       const response = await daysApi.get(date)
-      return response.data
+      const d = response.data
+      if (!d) return d
+      return {
+        ...d,
+        planVersion: d.plan_version ?? d.planVersion ?? 0,
+        ordersCount: d.orders_count ?? d.ordersCount ?? 0,
+        absentStaffCount: d.absent_staff_count ?? d.absentStaffCount ?? 0,
+        absentStaffCodes: d.absent_staff_codes || d.absentStaffCodes || [],
+      }
     },
     enabled: !!date,
     retry: (failureCount, error: any) => {
@@ -282,12 +290,123 @@ export const useCreatePlan = () => {
   })
 }
 
+export function normalizeStop(stop: any) {
+  if (!stop) return stop
+  const eq = stop.equipment_after || stop.equipmentAfter || {}
+  const ont = eq.ONT ?? eq.ont ?? stop.equipmentAfterOnt ?? 0
+  const router = eq.ROUTER ?? eq.router ?? stop.equipmentAfterRouter ?? 0
+  const stb = eq.STB ?? eq.stb ?? stop.equipmentAfterStb ?? 0
+
+  return {
+    ...stop,
+    id: stop.id,
+    seq: stop.seq,
+    type: stop.type,
+    locationCode: stop.location_code || stop.locationCode || '',
+    location_code: stop.location_code || stop.locationCode || '',
+    orderId: stop.order_code || stop.orderCode || stop.order_id || stop.orderId || null,
+    order_id: stop.order_id || stop.orderId || null,
+    orderCode: stop.order_code || stop.orderCode || null,
+    order_code: stop.order_code || stop.orderCode || null,
+    arrival: stop.arrival,
+    startTime: stop.start_time || stop.startTime || stop.arrival,
+    start_time: stop.start_time || stop.startTime || stop.arrival,
+    endTime: stop.end_time || stop.endTime || '',
+    end_time: stop.end_time || stop.endTime || '',
+    travelSec: stop.travel_sec ?? stop.travelSec ?? 0,
+    travel_sec: stop.travel_sec ?? stop.travelSec ?? 0,
+    distanceM: stop.distance_m ?? stop.distanceM ?? 0,
+    status: stop.status,
+    equipmentAfter: eq,
+    equipment_after: eq,
+    equipmentAfterOnt: ont,
+    equipmentAfterRouter: router,
+    equipmentAfterStb: stb,
+  }
+}
+
+export function normalizeRoute(route: any) {
+  if (!route) return route
+  return {
+    ...route,
+    routeId: route.route_id || route.routeId || route.id,
+    route_id: route.route_id || route.routeId || route.id,
+    staffId: route.staff_id || route.staffId,
+    staff_id: route.staff_id || route.staffId,
+    staffCode: route.staff_code || route.staffCode,
+    staff_code: route.staff_code || route.staffCode,
+    staffName: route.staff_name || route.staffName,
+    staff_name: route.staff_name || route.staffName,
+    serviceCenterCode: route.service_center_code || route.serviceCenterCode,
+    service_center_code: route.service_center_code || route.serviceCenterCode,
+    totalTravelSec: route.total_travel_sec ?? route.totalTravelSec ?? 0,
+    total_travel_sec: route.total_travel_sec ?? route.totalTravelSec ?? 0,
+    totalWorkMin: route.total_work_min ?? route.totalWorkMin ?? 0,
+    total_work_min: route.total_work_min ?? route.totalWorkMin ?? 0,
+    totalOrders: route.total_orders ?? route.totalOrders ?? 0,
+    total_orders: route.total_orders ?? route.totalOrders ?? 0,
+    stops: (route.stops || []).map(normalizeStop),
+  }
+}
+
+export function normalizePlan(plan: any) {
+  if (!plan) return plan
+  const m = plan.metrics || {}
+  const metrics = {
+    totalOrders: m.total_orders ?? m.totalOrders ?? 0,
+    total_orders: m.total_orders ?? m.totalOrders ?? 0,
+    assignedOrders: m.assigned_orders ?? m.assignedOrders ?? 0,
+    assigned_orders: m.assigned_orders ?? m.assignedOrders ?? 0,
+    unassignedOrders: m.unassigned_orders ?? m.unassignedOrders ?? 0,
+    unassigned_orders: m.unassigned_orders ?? m.unassignedOrders ?? 0,
+    pgpOrders: m.pgp_orders ?? m.pgpOrders ?? 0,
+    pgp_orders: m.pgp_orders ?? m.pgpOrders ?? 0,
+    activeRoutes: m.active_routes ?? m.activeRoutes ?? 0,
+    active_routes: m.active_routes ?? m.activeRoutes ?? 0,
+    totalTravelSec: m.total_travel_sec ?? m.totalTravelSec ?? 0,
+    total_travel_sec: m.total_travel_sec ?? m.totalTravelSec ?? 0,
+    avgTravelSecPerRoute: m.avg_travel_sec_per_route ?? m.avgTravelSecPerRoute ?? 0,
+  }
+
+  const unassigned = (plan.unassigned_orders || plan.unassignedOrders || []).map((uo: any) => ({
+    ...uo,
+    orderId: uo.order_code || uo.orderCode || uo.order_id || uo.orderId,
+    order_id: uo.order_id || uo.orderId,
+    orderCode: uo.order_code || uo.orderCode,
+    reasonText: uo.reason_text || uo.reasonText || uo.reason || '',
+    reason_text: uo.reason_text || uo.reasonText || uo.reason || '',
+    suggestedAction: uo.suggested_action || uo.suggestedAction || '',
+  }))
+
+  const pgpGroups = (plan.pgp_groups || plan.pgpGroups || []).map((pgp: any) => ({
+    ...pgp,
+    code: pgp.code,
+    accessNodeCode: pgp.access_node_code || pgp.accessNodeCode,
+    access_node_code: pgp.access_node_code || pgp.accessNodeCode,
+    orderCodes: pgp.order_codes || pgp.orderCodes || [],
+    order_codes: pgp.order_codes || pgp.orderCodes || [],
+  }))
+
+  return {
+    ...plan,
+    planVersion: plan.plan_version ?? plan.planVersion ?? 1,
+    plan_version: plan.plan_version ?? plan.planVersion ?? 1,
+    metrics,
+    routes: (plan.routes || []).map(normalizeRoute),
+    unassignedOrders: unassigned,
+    unassigned_orders: unassigned,
+    pgpGroups,
+    pgp_groups: pgpGroups,
+    alerts: plan.alerts || [],
+  }
+}
+
 export const usePlan = (date: string) => {
   return useQuery({
     queryKey: ['plan', date],
     queryFn: async () => {
       const response = await daysApi.plan.get(date)
-      return response.data
+      return normalizePlan(response.data)
     },
     enabled: !!date,
   })

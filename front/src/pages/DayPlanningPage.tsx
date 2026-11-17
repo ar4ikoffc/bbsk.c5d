@@ -107,12 +107,24 @@ export const DayPlanningPage = () => {
     if (!plan?.routes) return []
     if (!selectedServiceCenterId) return plan.routes
 
-    const sc = serviceCenters.find((s: any) => s.id === selectedServiceCenterId)
+    const sc = serviceCenters.find(
+      (s: any) =>
+        s.id === selectedServiceCenterId ||
+        s.service_center_id === selectedServiceCenterId ||
+        s.code === selectedServiceCenterId
+    )
     if (!sc) return plan.routes
 
-    return plan.routes.filter(
-      (r: any) => r.serviceCenterCode === sc.code || r.serviceCenterId === selectedServiceCenterId
-    )
+    const scCode = sc.service_center_id || sc.serviceCenterId || sc.code
+
+    return plan.routes.filter((r: any) => {
+      const rScCode = r.serviceCenterCode || r.service_center_code
+      return (
+        rScCode === scCode ||
+        rScCode === selectedServiceCenterId ||
+        (sc.id && r.serviceCenterId === sc.id)
+      )
+    })
   }, [plan?.routes, selectedServiceCenterId, serviceCenters])
 
   // Toggle order selection for the day pool
@@ -198,6 +210,11 @@ export const DayPlanningPage = () => {
         const slotStart = customSlot?.start || o.slot_start || o.slotStart || `${currentDate}T09:00:00+05:00`
         const slotEnd = customSlot?.end || o.slot_end || o.slotEnd || `${currentDate}T11:00:00+05:00`
 
+        const reqEq = o.required_equipment || o.requiredEquipment || {}
+        const ont = reqEq.ONT ?? reqEq.ont ?? o.required_ont ?? o.requiredOnt ?? 0
+        const router = reqEq.ROUTER ?? reqEq.router ?? o.required_router ?? o.requiredRouter ?? 0
+        const stb = reqEq.STB ?? reqEq.stb ?? o.required_stb ?? o.requiredStb ?? 0
+
         return {
           order_id: code,
           building_id: o.building_id || o.buildingId || o.buildingCode || 'B-001',
@@ -213,10 +230,16 @@ export const DayPlanningPage = () => {
             end: slotEnd,
           },
           required_equipment: {
-            ont: o.required_ont ?? o.requiredOnt ?? 0,
-            router: o.required_router ?? o.requiredRouter ?? 0,
-            stb: o.required_stb ?? o.requiredStb ?? 0,
+            ONT: ont,
+            ROUTER: router,
+            STB: stb,
+            ont,
+            router,
+            stb,
           },
+          required_ont: ont,
+          required_router: router,
+          required_stb: stb,
           is_repeat: o.is_repeat ?? o.isRepeat ?? false,
           previous_order_id: o.previous_order_id || o.previousOrderId || null,
         }
@@ -559,9 +582,10 @@ export const DayPlanningPage = () => {
                         const slotEnd = customSlot?.end || order.slot_end || order.slotEnd
                         const address = order.address || order.building?.address || order.building_id || order.buildingId || '—'
                         const wtName = order.work_type_name || order.workType?.name || order.work_type_id || order.workTypeId || '—'
-                        const ont = order.required_ont ?? order.requiredOnt ?? 0
-                        const router = order.required_router ?? order.requiredRouter ?? 0
-                        const stb = order.required_stb ?? order.requiredStb ?? 0
+                        const reqEq = order.required_equipment || order.requiredEquipment || {}
+                        const ont = reqEq.ONT ?? reqEq.ont ?? order.required_ont ?? order.requiredOnt ?? 0
+                        const router = reqEq.ROUTER ?? reqEq.router ?? order.required_router ?? order.requiredRouter ?? 0
+                        const stb = reqEq.STB ?? reqEq.stb ?? order.required_stb ?? order.requiredStb ?? 0
 
                         return (
                           <TableRow
@@ -797,24 +821,35 @@ export const DayPlanningPage = () => {
                       Маршрутов нет или они отфильтрованы по сервисному центру.
                     </div>
                   ) : (
-                    filteredRoutes.map((route: any) => (
-                      <Card key={route.routeId}>
+                    filteredRoutes.map((route: any) => {
+                      const routeId = route.routeId || route.route_id || route.id
+                      const staffCode = route.staffCode || route.staff_code || ''
+                      const staffName = route.staffName || route.staff_name || ''
+                      const scCode = route.serviceCenterCode || route.service_center_code || ''
+                      const totalOrders = route.totalOrders ?? route.total_orders ?? 0
+                      const totalTravelSec = route.totalTravelSec ?? route.total_travel_sec ?? 0
+                      const totalWorkMin = route.totalWorkMin ?? route.total_work_min ?? 0
+
+                      return (
+                      <Card key={routeId}>
                         <CardHeader className="pb-3 bg-muted/20 border-b">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <div className="flex items-center gap-2.5">
-                              <Badge variant="secondary" className="font-mono text-xs">
-                                {route.serviceCenterCode}
-                              </Badge>
-                              <span className="font-bold text-base">{route.staffCode}</span>
-                              <span className="text-sm text-muted-foreground">{route.staffName}</span>
+                              {scCode && (
+                                <Badge variant="secondary" className="font-mono text-xs">
+                                  {scCode}
+                                </Badge>
+                              )}
+                              <span className="font-bold text-base">{staffCode}</span>
+                              <span className="text-sm text-muted-foreground">{staffName}</span>
                               <Badge variant={route.status === 'ACTIVE' ? 'default' : 'outline'} className="text-[10px]">
                                 {route.status}
                               </Badge>
                             </div>
                             <div className="text-xs text-muted-foreground flex items-center gap-3">
-                              <span>Нарядов: <strong className="text-foreground">{route.totalOrders}</strong></span>
-                              <span>В пути: <strong className="text-foreground">{Math.round(route.totalTravelSec / 60)} мин</strong></span>
-                              <span>Работа: <strong className="text-foreground">{route.totalWorkMin} мин</strong></span>
+                              <span>Нарядов: <strong className="text-foreground">{totalOrders}</strong></span>
+                              <span>В пути: <strong className="text-foreground">{Math.round(totalTravelSec / 60)} мин</strong></span>
+                              <span>Работа: <strong className="text-foreground">{totalWorkMin} мин</strong></span>
                             </div>
                           </div>
                         </CardHeader>
@@ -832,8 +867,19 @@ export const DayPlanningPage = () => {
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {route.stops.map((stop: any) => (
-                                <TableRow key={stop.seq} className="text-xs">
+                              {(route.stops || []).map((stop: any) => {
+                                const orderCode = stop.orderCode || stop.order_code || stop.orderId || stop.order_id
+                                const locationCode = stop.locationCode || stop.location_code || ''
+                                const arrival = stop.arrival
+                                const endTime = stop.endTime || stop.end_time
+                                const travelSec = stop.travelSec ?? stop.travel_sec ?? 0
+                                const eq = stop.equipmentAfter || stop.equipment_after || {}
+                                const ont = eq.ONT ?? eq.ont ?? stop.equipmentAfterOnt ?? 0
+                                const router = eq.ROUTER ?? eq.router ?? stop.equipmentAfterRouter ?? 0
+                                const stb = eq.STB ?? eq.stb ?? stop.equipmentAfterStb ?? 0
+
+                                return (
+                                <TableRow key={stop.id || stop.seq} className="text-xs">
                                   <TableCell className="font-mono font-medium">{stop.seq}</TableCell>
                                   <TableCell>
                                     <Badge
@@ -850,52 +896,71 @@ export const DayPlanningPage = () => {
                                     </Badge>
                                   </TableCell>
                                   <TableCell className="font-medium">
-                                    {stop.orderId ? `${stop.locationCode} (${stop.orderId})` : stop.locationCode}
+                                    {orderCode ? (
+                                      <div className="flex items-center gap-1.5 font-mono">
+                                        <span className="text-primary font-bold">{orderCode}</span>
+                                        {locationCode && (
+                                          <span className="text-muted-foreground text-[11px]">({locationCode})</span>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="font-mono">{locationCode}</span>
+                                    )}
                                   </TableCell>
                                   <TableCell className="font-mono">
-                                    {stop.arrival ? stop.arrival.substring(11, 16) : '—'}
+                                    {arrival ? arrival.substring(11, 16) : '—'}
                                   </TableCell>
                                   <TableCell className="font-mono">
-                                    {stop.endTime ? stop.endTime.substring(11, 16) : '—'}
+                                    {endTime ? endTime.substring(11, 16) : '—'}
                                   </TableCell>
                                   <TableCell>
-                                    {Math.round(stop.travelSec / 60)} мин
+                                    {travelSec > 0 ? `${Math.round(travelSec / 60)} мин` : '0 мин'}
                                   </TableCell>
                                   <TableCell className="font-mono text-muted-foreground">
-                                    {stop.equipmentAfterOnt !== null
-                                      ? `ONT:${stop.equipmentAfterOnt} RT:${stop.equipmentAfterRouter} STB:${stop.equipmentAfterStb}`
-                                      : '—'}
+                                    ONT:{ont} RT:{router} STB:{stb}
                                   </TableCell>
                                 </TableRow>
-                              ))}
+                                )
+                              })}
                             </TableBody>
                           </Table>
                         </CardContent>
                       </Card>
-                    ))
+                      )
+                    })
                   )}
                 </TabsContent>
 
                 {/* SubTab: Unassigned */}
                 <TabsContent value="unassigned" className="space-y-3">
-                  {!plan.unassignedOrders || plan.unassignedOrders.length === 0 ? (
+                  {!(plan.unassignedOrders || plan.unassigned_orders) || (plan.unassignedOrders || plan.unassigned_orders).length === 0 ? (
                     <div className="py-8 text-center text-muted-foreground text-sm">
                       Все наряды успешно распределены по бригадам.
                     </div>
                   ) : (
-                    plan.unassignedOrders.map((uo: any, idx: number) => (
+                    (plan.unassignedOrders || plan.unassigned_orders).map((uo: any, idx: number) => {
+                      const orderId = uo.orderCode || uo.order_code || uo.orderId || uo.order_id || idx
+                      const reason = uo.reasonText || uo.reason_text || uo.reason || 'Нехватка времени смены / нет подходящей квалификации'
+                      const action = uo.suggestedAction || uo.suggested_action
+                      return (
                       <Card key={uo.id || idx} className="border-l-4 border-amber-500">
                         <CardContent className="py-3 flex items-center justify-between">
                           <div>
-                            <span className="font-bold text-sm text-primary font-mono">{uo.orderId}</span>
+                            <span className="font-bold text-sm text-primary font-mono">{orderId}</span>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              Причина: {uo.reasonText || uo.reason || 'Нехватка времени смены / нет подходящей квалификации'}
+                              Причина: {reason}
                             </p>
+                            {action && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                Рекомендация: {action}
+                              </p>
+                            )}
                           </div>
                           <Badge variant="outline">Не назначен</Badge>
                         </CardContent>
                       </Card>
-                    ))
+                      )
+                    })
                   )}
                 </TabsContent>
 
@@ -907,10 +972,10 @@ export const DayPlanningPage = () => {
                     </div>
                   ) : (
                     plan.alerts.map((alert: any) => (
-                      <Card key={alert.id} className="border-l-4 border-destructive">
+                      <Card key={alert.id || alert.code} className="border-l-4 border-destructive">
                         <CardContent className="py-3">
                           <p className="font-semibold text-sm">{alert.message}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5 font-mono">{alert.type}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 font-mono">{alert.type || alert.code}</p>
                         </CardContent>
                       </Card>
                     ))
@@ -920,9 +985,29 @@ export const DayPlanningPage = () => {
                 {/* SubTab: PGP */}
                 <TabsContent value="pgp" className="space-y-3">
                   <div className="p-4 bg-muted/30 rounded-xl border text-xs text-muted-foreground">
-                    Выявленные группы повреждений (ПГП): <strong>{plan.metrics?.pgpOrders ?? 0}</strong> нарядов.
+                    Выявленные группы повреждений (ПГП): <strong>{(plan.pgpGroups || plan.pgp_groups)?.length ?? (plan.metrics?.pgpOrders ?? 0)}</strong> нарядов.
                     Заявки из групп ПГП изолируются от обычных выездов и направляются на аварийно-восстановительные бригады.
                   </div>
+                  {((plan.pgpGroups || plan.pgp_groups) || []).map((pgp: any) => (
+                    <Card key={pgp.id || pgp.code} className="border-l-4 border-primary">
+                      <CardContent className="py-3 flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-primary font-mono">{pgp.code}</span>
+                            <Badge variant="outline" className="text-[10px]">
+                              {pgp.action || 'ISOLATE'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Узел доступа: <strong>{pgp.accessNodeCode || pgp.access_node_code}</strong>
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Наряды в группе: {(pgp.orderCodes || pgp.order_codes || []).join(', ')}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </TabsContent>
               </Tabs>
             </div>

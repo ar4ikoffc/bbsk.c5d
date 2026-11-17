@@ -157,9 +157,9 @@ class DayService(
         val latestStart = orderDto.latestStart ?: calculateLatestStart(resolvedSlotStart, resolvedSlotEnd, workType)
         val deadline = orderDto.deadline ?: calculateDeadline(latestStart, resolvedSlotEnd, workType)
 
-        val ont = orderDto.requiredEquipment?.ont ?: 0
-        val router = orderDto.requiredEquipment?.router ?: 0
-        val stb = orderDto.requiredEquipment?.stb ?: 0
+        val ont = orderDto.requiredEquipment?.ont ?: orderDto.requiredOnt ?: 0
+        val router = orderDto.requiredEquipment?.router ?: orderDto.requiredRouter ?: 0
+        val stb = orderDto.requiredEquipment?.stb ?: orderDto.requiredStb ?: 0
 
         return WorkOrder(
             code = code,
@@ -211,9 +211,9 @@ class DayService(
         val latestStart = orderDto.latestStart ?: calculateLatestStart(resolvedSlotStart, resolvedSlotEnd, workType)
         val deadline = orderDto.deadline ?: calculateDeadline(latestStart, resolvedSlotEnd, workType)
 
-        val ont = orderDto.requiredEquipment?.ont ?: 0
-        val router = orderDto.requiredEquipment?.router ?: 0
-        val stb = orderDto.requiredEquipment?.stb ?: 0
+        val ont = orderDto.requiredEquipment?.ont ?: orderDto.requiredOnt ?: 0
+        val router = orderDto.requiredEquipment?.router ?: orderDto.requiredRouter ?: 0
+        val stb = orderDto.requiredEquipment?.stb ?: orderDto.requiredStb ?: 0
 
         order.day = day
         order.serviceCenter = serviceCenter

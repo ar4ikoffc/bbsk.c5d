@@ -10,7 +10,7 @@ import { useDayStore } from '@/store/dayStore'
 import { RouteMap, ROUTE_COLORS } from '@/components/map/RouteMap'
 
 export const MapViewPage = () => {
-  const { currentDate, setCurrentDate, selectedServiceCenterId } = useDayStore()
+  const { currentDate, setCurrentDate, selectedServiceCenterId, setSelectedServiceCenterId } = useDayStore()
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null)
   const [showAccessNodes, setShowAccessNodes] = useState(false)
   const [showUnassigned, setShowUnassigned] = useState(true)
@@ -26,16 +26,28 @@ export const MapViewPage = () => {
     if (!selectedServiceCenterId) return plan.routes
 
     // Find SC code
-    const sc = serviceCenters.find((s: any) => s.id === selectedServiceCenterId)
+    const sc = serviceCenters.find(
+      (s: any) =>
+        s.id === selectedServiceCenterId ||
+        s.service_center_id === selectedServiceCenterId ||
+        s.code === selectedServiceCenterId
+    )
     if (!sc) return plan.routes
 
-    return plan.routes.filter(
-      (r: any) => r.serviceCenterCode === sc.code || r.serviceCenterId === selectedServiceCenterId
-    )
+    const scCode = sc.service_center_id || sc.serviceCenterId || sc.code
+
+    return plan.routes.filter((r: any) => {
+      const rScCode = r.serviceCenterCode || r.service_center_code
+      return (
+        rScCode === scCode ||
+        rScCode === selectedServiceCenterId ||
+        (sc.id && r.serviceCenterId === sc.id)
+      )
+    })
   }, [plan?.routes, selectedServiceCenterId, serviceCenters])
 
   const selectedRoute = useMemo(() => {
-    return filteredRoutes.find((r: any) => r.routeId === selectedRouteId) || null
+    return filteredRoutes.find((r: any) => (r.routeId || r.route_id) === selectedRouteId) || null
   }, [filteredRoutes, selectedRouteId])
 
   return (
@@ -80,6 +92,26 @@ export const MapViewPage = () => {
             <div className="flex items-center gap-2">
               <span className="font-semibold text-slate-700">Маршрутов:</span>
               <Badge variant="secondary">{filteredRoutes.length}</Badge>
+              {selectedServiceCenterId && (
+                <Badge variant="outline" className="gap-1 bg-background text-xs">
+                  <span>
+                    СЦ:{' '}
+                    {serviceCenters.find(
+                      (s: any) =>
+                        s.id === selectedServiceCenterId ||
+                        s.service_center_id === selectedServiceCenterId
+                    )?.service_center_id || selectedServiceCenterId}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedServiceCenterId(null)}
+                    className="ml-1 hover:text-destructive font-bold"
+                    title="Сбросить фильтр по сервисному центру"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
               {selectedRoute && (
                 <div className="flex items-center gap-1.5 ml-2">
                   <span className="text-muted-foreground">Выбран:</span>
@@ -139,7 +171,7 @@ export const MapViewPage = () => {
                 <span>Список бригад ({filteredRoutes.length})</span>
                 {plan?.metrics && (
                   <span className="text-xs font-normal text-muted-foreground">
-                    Всего нарядов: {plan.metrics.assignedOrders} / {plan.metrics.totalOrders}
+                    Всего нарядов: {plan.metrics.assignedOrders ?? plan.metrics.assigned_orders ?? 0} / {plan.metrics.totalOrders ?? plan.metrics.total_orders ?? 0}
                   </span>
                 )}
               </CardTitle>
@@ -153,9 +185,24 @@ export const MapViewPage = () => {
               )}
 
               {!planLoading && filteredRoutes.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground text-sm space-y-2">
-                  <p>На дату {currentDate} маршруты не найдены.</p>
-                  <p className="text-xs">Постройте план во вкладке «План на день».</p>
+                <div className="text-center py-12 text-muted-foreground text-sm space-y-3">
+                  <p>
+                    {plan?.routes && plan.routes.length > 0
+                      ? 'Маршруты скрыты фильтром по сервисному центру.'
+                      : `На дату ${currentDate} маршруты не найдены.`}
+                  </p>
+                  {selectedServiceCenterId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedServiceCenterId(null)}
+                    >
+                      Показать все сервисные центры
+                    </Button>
+                  )}
+                  {(!plan?.routes || plan.routes.length === 0) && (
+                    <p className="text-xs">Постройте план во вкладке «План на день».</p>
+                  )}
                 </div>
               )}
 

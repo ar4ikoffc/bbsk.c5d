@@ -42,9 +42,10 @@ const PRESET_SLOTS = [
 ]
 
 export const OrdersPage = () => {
-  const { currentDate, setCurrentDate, selectedServiceCenterId } = useDayStore()
+  const { currentDate, setCurrentDate, selectedServiceCenterId, setSelectedServiceCenterId } = useDayStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
+  const [filterAllDates, setFilterAllDates] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [generatorOpen, setGeneratorOpen] = useState(false)
   const [viewOrder, setViewOrder] = useState<any>(null)
@@ -55,7 +56,7 @@ export const OrdersPage = () => {
   const [slotTimeEnd, setSlotTimeEnd] = useState('11:00')
 
   const { data: orders = [], isLoading, refetch } = useOrders({
-    date: currentDate,
+    date: filterAllDates ? undefined : currentDate,
     status: statusFilter === 'ALL' ? undefined : statusFilter,
   })
 
@@ -190,6 +191,18 @@ export const OrdersPage = () => {
 
   // Filter orders by search & selected SC
   const filteredOrders = useMemo(() => {
+    const scObj = selectedServiceCenterId
+      ? serviceCenters.find((s: any) => s.id === selectedServiceCenterId || s.code === selectedServiceCenterId)
+      : null
+    const allowedScValues = new Set<string>()
+    if (scObj) {
+      if (scObj.id) allowedScValues.add(scObj.id)
+      if (scObj.code) allowedScValues.add(scObj.code)
+      if (scObj.service_center_id) allowedScValues.add(scObj.service_center_id)
+    } else if (selectedServiceCenterId) {
+      allowedScValues.add(selectedServiceCenterId)
+    }
+
     return orders.filter((o: any) => {
       const bldId = o.building_id || o.buildingId
       const bld = buildingMap.get(bldId)
@@ -197,11 +210,16 @@ export const OrdersPage = () => {
       const wt = workTypeMap.get(wtId)
 
       // Filter by SC
-      if (selectedServiceCenterId) {
-        const scId = o.service_center_id || o.serviceCenterId || bld?.zone_service_center_id || bld?.zoneServiceCenterId
-        if (scId && scId !== selectedServiceCenterId) {
-          return false
-        }
+      if (allowedScValues.size > 0) {
+        const oScId = o.service_center_id || o.serviceCenterId
+        const oScCode = o.service_center_code || o.serviceCenterCode
+        const bldScId = bld?.zone_service_center_id || bld?.zoneServiceCenterId
+        const matches =
+          (oScId && allowedScValues.has(oScId)) ||
+          (oScCode && allowedScValues.has(oScCode)) ||
+          (bldScId && allowedScValues.has(bldScId))
+
+        if (!matches) return false
       }
 
       if (!search) return true
@@ -216,7 +234,7 @@ export const OrdersPage = () => {
         wtName.toLowerCase().includes(s)
       )
     })
-  }, [orders, selectedServiceCenterId, search, buildingMap, workTypeMap])
+  }, [orders, selectedServiceCenterId, serviceCenters, search, buildingMap, workTypeMap])
 
   return (
     <div className="space-y-6">
@@ -251,11 +269,28 @@ export const OrdersPage = () => {
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <CardTitle className="text-lg">
-              Список нарядов ({filteredOrders.length})
-            </CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-lg">
+                Список нарядов ({filteredOrders.length})
+              </CardTitle>
+              {selectedServiceCenterId && (
+                <Badge variant="secondary" className="gap-1 text-xs">
+                  <span>
+                    СЦ: {serviceCenters.find((s: any) => s.id === selectedServiceCenterId || s.code === selectedServiceCenterId)?.code || selectedServiceCenterId}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedServiceCenterId(null)}
+                    className="ml-1 hover:text-destructive font-bold"
+                    title="Сбросить фильтр по сервисному центру"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+            </div>
 
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5 flex-wrap">
               {/* Search input */}
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -264,13 +299,13 @@ export const OrdersPage = () => {
                   placeholder="Поиск по коду/адресу..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-56 pl-8 pr-3 py-1.5 text-sm rounded-md border border-input bg-background"
+                  className="w-48 pl-8 pr-3 py-1.5 text-xs rounded-md border border-input bg-background"
                 />
               </div>
 
               {/* Status filter */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[150px] h-9 text-xs">
+                <SelectTrigger className="w-[140px] h-9 text-xs">
                   <SelectValue placeholder="Статус" />
                 </SelectTrigger>
                 <SelectContent>
@@ -283,16 +318,29 @@ export const OrdersPage = () => {
                 </SelectContent>
               </Select>
 
-              {/* Date filter */}
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                <input
-                  type="date"
-                  value={currentDate}
-                  onChange={(e) => e.target.value && setCurrentDate(e.target.value)}
-                  className="rounded-md border border-input bg-background px-2 py-1 text-sm font-medium"
-                />
-              </div>
+              {/* Date toggle button */}
+              <Button
+                variant={filterAllDates ? 'secondary' : 'outline'}
+                size="sm"
+                onClick={() => setFilterAllDates(!filterAllDates)}
+                className="text-xs h-9 gap-1"
+                title="Переключить просмотр всех дат или только выбранного дня"
+              >
+                {filterAllDates ? 'Все даты' : 'Только день'}
+              </Button>
+
+              {/* Date picker */}
+              {!filterAllDates && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <input
+                    type="date"
+                    value={currentDate}
+                    onChange={(e) => e.target.value && setCurrentDate(e.target.value)}
+                    className="rounded-md border border-input bg-background px-2 py-1 text-xs font-medium"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -303,8 +351,27 @@ export const OrdersPage = () => {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : filteredOrders.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground text-sm">
-              Наряды не найдены на дату {currentDate}. Нажмите «Создать наряд».
+            <div className="text-center py-12 text-muted-foreground text-sm space-y-3">
+              <p>Наряды не найдены по текущим фильтрам{filterAllDates ? '' : ` на дату ${currentDate}`}.</p>
+              <div className="flex items-center justify-center gap-2">
+                {(selectedServiceCenterId || search || statusFilter !== 'ALL' || !filterAllDates) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSearch('')
+                      setStatusFilter('ALL')
+                      setSelectedServiceCenterId(null)
+                      setFilterAllDates(true)
+                    }}
+                  >
+                    Сбросить все фильтры
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => setGeneratorOpen(true)}>
+                  Сгенерировать наряды
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -333,9 +400,10 @@ export const OrdersPage = () => {
                     const wtName = order.work_type_name || wt?.name || wt?.code || wtId || '—'
                     const slotStart = order.slot_start || order.slotStart
                     const slotEnd = order.slot_end || order.slotEnd
-                    const ont = order.required_ont ?? order.requiredOnt ?? 0
-                    const router = order.required_router ?? order.requiredRouter ?? 0
-                    const stb = order.required_stb ?? order.requiredStb ?? 0
+                    const reqEq = order.required_equipment || order.requiredEquipment || {}
+                    const ont = reqEq.ONT ?? reqEq.ont ?? order.required_ont ?? order.requiredOnt ?? 0
+                    const router = reqEq.ROUTER ?? reqEq.router ?? order.required_router ?? order.requiredRouter ?? 0
+                    const stb = reqEq.STB ?? reqEq.stb ?? order.required_stb ?? order.requiredStb ?? 0
 
                     return (
                       <TableRow key={order.id || code}>

@@ -65,6 +65,15 @@ data class DayOrderInputDto(
     @field:Schema(description = "Потребность в абонентском оборудовании")
     val requiredEquipment: EquipmentDto? = null,
 
+    @field:JsonProperty("required_ont")
+    val requiredOnt: Int? = null,
+
+    @field:JsonProperty("required_router")
+    val requiredRouter: Int? = null,
+
+    @field:JsonProperty("required_stb")
+    val requiredStb: Int? = null,
+
     @field:JsonProperty("is_repeat")
     @field:Schema(description = "Признак повторного обращения", example = "false")
     val isRepeat: Boolean = false,
